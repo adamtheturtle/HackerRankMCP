@@ -1,0 +1,128 @@
+import Foundation
+
+public struct HackerRankMCPAccount: Codable, Hashable, Identifiable, Sendable {
+    public let id: UUID
+    public var name: String
+    public var token: String
+    public var baseURL: URL
+
+    public init(
+        id: UUID = UUID(),
+        name: String,
+        token: String,
+        baseURL: URL = URL(string: "https://www.hackerrank.com")!
+    ) {
+        self.id = id
+        self.name = name
+        self.token = token
+        self.baseURL = baseURL
+    }
+}
+
+public struct HackerRankMCPAccountSet: Sendable {
+    public let accounts: [HackerRankMCPAccount]
+    public let defaultAccountID: UUID
+
+    public init(accounts: [HackerRankMCPAccount], defaultAccountID: UUID? = nil) throws {
+        guard let first = accounts.first else { throw HackerRankMCPConfigError.noAccounts }
+        let names = accounts.map { $0.name.lowercased() }
+        guard Set(names).count == names.count else { throw HackerRankMCPConfigError.duplicateNames }
+        let selected = defaultAccountID ?? first.id
+        guard accounts.contains(where: { $0.id == selected }) else {
+            throw HackerRankMCPConfigError.invalidDefaultAccount
+        }
+        self.accounts = accounts
+        self.defaultAccountID = selected
+    }
+
+    public func resolve(_ requested: String?) -> HackerRankMCPAccount? {
+        guard let requested, !requested.isEmpty else {
+            return accounts.first { $0.id == defaultAccountID }
+        }
+        return accounts.first {
+            $0.name.localizedCaseInsensitiveCompare(requested) == .orderedSame
+                || $0.id.uuidString.localizedCaseInsensitiveCompare(requested) == .orderedSame
+        }
+    }
+}
+
+public enum HackerRankMCPConfigError: LocalizedError, Equatable {
+    case noAccounts
+    case duplicateNames
+    case invalidDefaultAccount
+    case invalidBaseURL(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .noAccounts: "No HackerRank accounts are configured."
+        case .duplicateNames: "HackerRank account names must be unique."
+        case .invalidDefaultAccount: "The default HackerRank account is not configured."
+        case let .invalidBaseURL(value): "Unsupported HackerRank base URL: \(value)"
+        }
+    }
+}
+
+private struct ConfigFile: Decodable {
+    struct Account: Decodable {
+        let name: String
+        let token: String
+        let baseURL: String?
+        let isDefault: Bool?
+
+        enum CodingKeys: String, CodingKey {
+            case name, token
+            case baseURL = "base_url"
+            case isDefault = "default"
+        }
+    }
+
+    let accounts: [Account]
+}
+
+public func loadHackerRankMCPAccounts(
+    environment: [String: String] = ProcessInfo.processInfo.environment
+) throws -> HackerRankMCPAccountSet {
+    if let path = environment["HACKERRANK_MCP_CONFIG"], !path.isEmpty {
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let config = try JSONDecoder().decode(ConfigFile.self, from: data)
+        var defaultID: UUID?
+        let accounts = try config.accounts.map { item in
+            let baseURL = try validatedBaseURL(item.baseURL)
+            let account = HackerRankMCPAccount(name: item.name, token: item.token, baseURL: baseURL)
+            if item.isDefault == true {
+                defaultID = account.id
+            }
+            return account
+        }
+        return try HackerRankMCPAccountSet(accounts: accounts, defaultAccountID: defaultID)
+    }
+
+    guard let token = environment["HACKERRANK_API_TOKEN"], !token.isEmpty else {
+        throw HackerRankMCPConfigError.noAccounts
+    }
+    let baseURL = try validatedBaseURL(environment["HACKERRANK_BASE_URL"])
+    return try HackerRankMCPAccountSet(accounts: [
+        HackerRankMCPAccount(
+            name: environment["HACKERRANK_ACCOUNT_NAME"] ?? "HackerRank",
+            token: token,
+            baseURL: baseURL
+        ),
+    ])
+}
+
+private func validatedBaseURL(_ value: String?) throws -> URL {
+    guard let value, !value.isEmpty else {
+        return URL(string: "https://www.hackerrank.com")!
+    }
+    guard let url = URL(string: value),
+          url.scheme?.lowercased() == "https",
+          url.host != nil,
+          url.user == nil,
+          url.password == nil,
+          url.query == nil,
+          url.fragment == nil
+    else {
+        throw HackerRankMCPConfigError.invalidBaseURL(value)
+    }
+    return url
+}
