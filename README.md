@@ -12,7 +12,7 @@ standalone server's environment/configuration file and are never returned to cli
 ```swift
 .package(
     url: "https://github.com/adamtheturtle/HackerRankMCP.git",
-    from: "0.1.0"
+    from: "0.1.1"
 )
 ```
 
@@ -77,7 +77,7 @@ The JSON configuration format supports multiple accounts:
 ## Requirements
 
 - Swift 6.2+
-- macOS 15+ or Linux
+- macOS 15+
 
 ## License
 
