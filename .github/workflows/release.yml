@@ -3,36 +3,179 @@ name: Release
 on:
   push:
     tags: ["*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to publish
+        required: true
+        type: string
 
 permissions:
   contents: write
 
+env:
+  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
 jobs:
   release:
     runs-on: macos-26
+    env:
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY: ${{ secrets.ASC_KEY }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      DEVELOPER_ID_APP_CERT_P12_BASE64: ${{ secrets.DEVELOPER_ID_APP_CERT_P12_BASE64 }}
+      DEVELOPER_ID_APP_CERT_PASSWORD: ${{ secrets.DEVELOPER_ID_APP_CERT_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
       - run: sudo xcode-select -s /Applications/Xcode_26.5.app
-      - name: Validate and test
+      - name: Check signing configuration
+        shell: bash
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          set -euo pipefail
+          missing=()
+          for name in \
+            ASC_ISSUER_ID \
+            ASC_KEY \
+            ASC_KEY_ID \
+            DEVELOPER_ID_APP_CERT_P12_BASE64 \
+            DEVELOPER_ID_APP_CERT_PASSWORD
+          do
+            if [[ -z "${!name:-}" ]]; then
+              missing+=("$name")
+            fi
+          done
+          if (( ${#missing[@]} > 0 )); then
+            echo "::error::Missing release secrets: ${missing[*]}"
+            exit 1
+          fi
+      - name: Validate and test
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
           grep -Fq "public let hackerRankMCPVersion = \"$version\"" Sources/HackerRankMCP/ReleaseVersion.swift
           swift test
       - name: Build macOS universal executable
+        shell: bash
         run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          package_name="hackerrank-mcp-${version}-macos-universal"
+          package_dir="dist/$package_name"
           swift build -c release --arch arm64 --scratch-path .build-arm64
           swift build -c release --arch x86_64 --scratch-path .build-x86_64
-          mkdir -p dist/hackerrank-mcp-${GITHUB_REF_NAME}-macos-universal
+          mkdir -p "$package_dir"
           lipo -create \
             .build-arm64/arm64-apple-macosx/release/hackerrank-mcp \
             .build-x86_64/x86_64-apple-macosx/release/hackerrank-mcp \
-            -output dist/hackerrank-mcp-${GITHUB_REF_NAME}-macos-universal/hackerrank-mcp
-          cp LICENSE README.md dist/hackerrank-mcp-${GITHUB_REF_NAME}-macos-universal/
-          tar -C dist -czf dist/hackerrank-mcp-${GITHUB_REF_NAME}-macos-universal.tar.gz hackerrank-mcp-${GITHUB_REF_NAME}-macos-universal
-          shasum -a 256 dist/*.tar.gz > dist/SHA256SUMS
+            -output "$package_dir/hackerrank-mcp"
+          lipo -archs "$package_dir/hackerrank-mcp"
+          cp LICENSE README.md "$package_dir/"
+      - name: Sign, notarize, and package
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          package_name="hackerrank-mcp-${version}-macos-universal"
+          package_dir="$GITHUB_WORKSPACE/dist/$package_name"
+          executable_path="$package_dir/hackerrank-mcp"
+          notarization_archive="$RUNNER_TEMP/$package_name.zip"
+          release_archive="$GITHUB_WORKSPACE/dist/$package_name.tar.gz"
+          certificate_path="$RUNNER_TEMP/developer-id.p12"
+          asc_key_path="$RUNNER_TEMP/asc-api-key.p8"
+          keychain_path="$RUNNER_TEMP/release-signing.keychain-db"
+          keychain_password="$(openssl rand -hex 24)"
+
+          cleanup() {
+            security delete-keychain "$keychain_path" >/dev/null 2>&1 || true
+            rm -f "$certificate_path" "$asc_key_path" "$notarization_archive"
+          }
+          trap cleanup EXIT
+
+          (
+            umask 077
+            printf '%s' "$DEVELOPER_ID_APP_CERT_P12_BASE64" \
+              | base64 --decode > "$certificate_path"
+            printf '%s' "$ASC_KEY" | base64 --decode > "$asc_key_path"
+          )
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security list-keychains -d user -s "$keychain_path"
+          security import "$certificate_path" \
+            -P "$DEVELOPER_ID_APP_CERT_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "$keychain_path"
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -s \
+            -k "$keychain_password" \
+            "$keychain_path"
+          signing_identity="$(
+            security find-identity -v -p codesigning "$keychain_path" \
+              | grep 'Developer ID Application' \
+              | head -1 \
+              | sed -E 's/.*"(.*)".*/\1/'
+          )"
+          if [[ -z "$signing_identity" ]]; then
+            echo "::error::No Developer ID Application identity found in certificate."
+            exit 1
+          fi
+
+          codesign \
+            --force \
+            --options runtime \
+            --timestamp \
+            --sign "$signing_identity" \
+            --keychain "$keychain_path" \
+            "$executable_path"
+          codesign --verify --strict --verbose=2 "$executable_path"
+
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$package_dir" \
+            "$notarization_archive"
+          set +e
+          submit_output="$(
+            xcrun notarytool submit "$notarization_archive" \
+              --key "$asc_key_path" \
+              --key-id "$ASC_KEY_ID" \
+              --issuer "$ASC_ISSUER_ID" \
+              --wait 2>&1
+          )"
+          submit_rc=$?
+          set -e
+          printf '%s\n' "$submit_output"
+          submission_id="$(
+            printf '%s\n' "$submit_output" \
+              | awk '/^[[:space:]]*id:/ { print $2; exit }'
+          )"
+          if ! printf '%s\n' "$submit_output" | grep -q 'status: Accepted'; then
+            if [[ -n "$submission_id" ]]; then
+              xcrun notarytool log "$submission_id" \
+                --key "$asc_key_path" \
+                --key-id "$ASC_KEY_ID" \
+                --issuer "$ASC_ISSUER_ID" || true
+            fi
+            echo "::error::Notarization failed (exit $submit_rc; status not Accepted)."
+            exit 1
+          fi
+
+          tar -C "$GITHUB_WORKSPACE/dist" \
+            -czf "$release_archive" \
+            "$package_name"
+          (
+            cd "$GITHUB_WORKSPACE/dist"
+            shasum -a 256 "$package_name.tar.gz" > SHA256SUMS
+          )
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           generate_release_notes: true
+          fail_on_unmatched_files: true
           files: |
             dist/*.tar.gz
             dist/SHA256SUMS
