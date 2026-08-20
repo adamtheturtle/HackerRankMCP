@@ -104,7 +104,18 @@ public struct HackerRankProvider: MCPToolProvider {
             case "list_tests":
                 let page = try await client.testsPage(after: cursor)
                 payload = pagePayload(page, key: "tests", account: account) {
-                    ["id": $0.id, "name": $0.name, "state": $0.state ?? ""]
+                    [
+                        "id": $0.id,
+                        "name": $0.name,
+                        "state": $0.state ?? "",
+                        // The assessment window only started decoding in HackerRankKit
+                        // 0.8.0: the wire keys are `starttime`/`endtime`, and the client
+                        // had been reading `start_time`/`end_time`, so these were always
+                        // absent before.
+                        "starts_at": $0.startTime.map { $0 as Any } ?? NSNull(),
+                        "ends_at": $0.endTime.map { $0 as Any } ?? NSNull(),
+                        "duration_minutes": $0.duration.map { $0 as Any } ?? NSNull(),
+                    ]
                 }
             case "list_questions":
                 let page = try await client.questionsPage(after: cursor)
@@ -125,7 +136,12 @@ public struct HackerRankProvider: MCPToolProvider {
                         "email": $0.email,
                         "name": $0.fullName ?? "",
                         "score": $0.score.map { $0 as Any } ?? NSNull(),
+                        "percentage_score": $0.percentageScore.map { $0 as Any } ?? NSNull(),
                         "status": $0.status.map { $0 as Any } ?? NSNull(),
+                        "ats_state": $0.atsState.map { $0 as Any } ?? NSNull(),
+                        // Whether an invite is still usable is a question an agent asks
+                        // constantly, and the client only began decoding it in 0.8.0.
+                        "invite_valid": $0.inviteValid.map { $0 as Any } ?? NSNull(),
                     ]
                 }
             case "list_users":
@@ -147,7 +163,11 @@ public struct HackerRankProvider: MCPToolProvider {
                         "name": $0.name,
                         "recruiters": $0.recruiterCount.map { $0 as Any } ?? NSNull(),
                         "developers": $0.developerCount.map { $0 as Any } ?? NSNull(),
-                        "interviewers": $0.interviewerCount.map { $0 as Any } ?? NSNull(),
+                        // `interviewers` is gone: HackerRank has no such field, so it was
+                        // reported as null for every real team. The seat caps are the
+                        // documented counterparts and do arrive.
+                        "recruiter_cap": $0.recruiterCap.map { $0 as Any } ?? NSNull(),
+                        "developer_cap": $0.developerCap.map { $0 as Any } ?? NSNull(),
                     ]
                 }
             default:
