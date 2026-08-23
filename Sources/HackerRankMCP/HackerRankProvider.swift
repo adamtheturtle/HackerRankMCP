@@ -366,6 +366,8 @@ func parseToolIdentity(
         } else {
             string = String(value)
         }
+    case .null:
+        return .missing
     default:
         return .invalid("\(key) must be a string or number identifier.")
     }
