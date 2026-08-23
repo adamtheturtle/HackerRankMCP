@@ -108,8 +108,10 @@ public func loadHackerRankMCPAccounts(
             throw HackerRankMCPConfigError.relativeConfigPath(path)
         }
         let url = URL(fileURLWithPath: expanded)
-        if FileManager.default.fileExists(atPath: url.path) {
+        do {
             return try loadAccounts(fromConfigFileAt: url)
+        } catch ConfigFileAbsence.missing {
+            // Fall through to HACKERRANK_API_TOKEN when the path is genuinely absent.
         }
     }
 
@@ -126,11 +128,18 @@ public func loadHackerRankMCPAccounts(
     throw HackerRankMCPConfigError.noAccounts
 }
 
+private enum ConfigFileAbsence: Error {
+    case missing
+}
+
 private func loadAccounts(fromConfigFileAt url: URL) throws -> HackerRankMCPAccountSet {
     let data: Data
     do {
         data = try Data(contentsOf: url)
     } catch {
+        if isMissingFileError(error) {
+            throw ConfigFileAbsence.missing
+        }
         throw HackerRankMCPConfigError.invalidConfig("could not read \(url.path): \(error.localizedDescription)")
     }
 
@@ -159,6 +168,22 @@ private func loadAccounts(fromConfigFileAt url: URL) throws -> HackerRankMCPAcco
         return account
     }
     return try HackerRankMCPAccountSet(accounts: accounts, defaultAccountID: defaultID)
+}
+
+
+/// True when `error` means the path does not exist (not merely unreadable).
+private func isMissingFileError(_ error: Error) -> Bool {
+    let nsError = error as NSError
+    if nsError.domain == NSCocoaErrorDomain, nsError.code == NSFileReadNoSuchFileError {
+        return true
+    }
+    if nsError.domain == NSPOSIXErrorDomain, nsError.code == ENOENT {
+        return true
+    }
+    if let cocoa = error as? CocoaError, cocoa.code == .fileReadNoSuchFile {
+        return true
+    }
+    return false
 }
 
 private func decodingErrorDescription(_ error: DecodingError) -> String {
