@@ -3,8 +3,25 @@ import HackerRankKit
 import MCP
 import MCPKit
 
+private final class HackerRankClientCache: Sendable {
+    private let lock = NSLock()
+    private nonisolated(unsafe) var storage: [UUID: HackerRankClient] = [:]
+
+    func client(for account: HackerRankMCPAccount) -> HackerRankClient {
+        lock.lock()
+        defer { lock.unlock() }
+        if let existing = storage[account.id] {
+            return existing
+        }
+        let created = HackerRankClient(token: account.token, baseURL: account.baseURL)
+        storage[account.id] = created
+        return created
+    }
+}
+
 public struct HackerRankProvider: MCPToolProvider {
     public let accountSet: HackerRankMCPAccountSet
+    private let clientCache = HackerRankClientCache()
 
     public init(accountSet: HackerRankMCPAccountSet) {
         self.accountSet = accountSet
@@ -90,14 +107,13 @@ public struct HackerRankProvider: MCPToolProvider {
         ]
     }
 
-    @MainActor
     private func list(
         _ name: String,
         account: HackerRankMCPAccount,
         cursor: String?,
         testID: String? = nil
     ) async -> CallTool.Result {
-        let client = HackerRankClient(token: account.token, baseURL: account.baseURL)
+        let client = clientCache.client(for: account)
         do {
             let payload: [String: Any]
             switch name {
@@ -113,10 +129,6 @@ public struct HackerRankProvider: MCPToolProvider {
                         "draft": $0.draft.map { $0 as Any } ?? NSNull(),
                         "locked": $0.locked.map { $0 as Any } ?? NSNull(),
                         "created_at": $0.createdAt.map { $0 as Any } ?? NSNull(),
-                        // The assessment window only started decoding in HackerRankKit
-                        // 0.8.0: the wire keys are `starttime`/`endtime`, and the client
-                        // had been reading `start_time`/`end_time`, so these were always
-                        // absent before.
                         "starts_at": $0.startTime.map { $0 as Any } ?? NSNull(),
                         "ends_at": $0.endTime.map { $0 as Any } ?? NSNull(),
                         "duration_minutes": $0.duration.map { $0 as Any } ?? NSNull(),
@@ -169,8 +181,6 @@ public struct HackerRankProvider: MCPToolProvider {
                         "attempt_start_time": $0.attemptStartTime.map { $0 as Any } ?? NSNull(),
                         "attempt_end_time": $0.attemptEndTime.map { $0 as Any } ?? NSNull(),
                         "invited_on": $0.invitedOn.map { $0 as Any } ?? NSNull(),
-                        // Whether an invite is still usable is a question an agent asks
-                        // constantly, and the client only began decoding it in 0.8.0.
                         "invite_valid": $0.inviteValid.map { $0 as Any } ?? NSNull(),
                     ]
                 }
@@ -206,9 +216,6 @@ public struct HackerRankProvider: MCPToolProvider {
                         "departments": $0.departments.map { $0 as Any } ?? NSNull(),
                         "recruiters": $0.recruiterCount.map { $0 as Any } ?? NSNull(),
                         "developers": $0.developerCount.map { $0 as Any } ?? NSNull(),
-                        // `interviewers` is gone: HackerRank has no such field, so it was
-                        // reported as null for every real team. The seat caps are the
-                        // documented counterparts and do arrive.
                         "recruiter_cap": $0.recruiterCap.map { $0 as Any } ?? NSNull(),
                         "developer_cap": $0.developerCap.map { $0 as Any } ?? NSNull(),
                     ]
@@ -264,7 +271,6 @@ func toolErrorMessage(_ error: Error) -> String {
 }
 
 private func compactJSONResult(_ value: Any) -> CallTool.Result {
-    // Avoid `.prettyPrinted` — MCP clients pay per token for whitespace.
     guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else {
         return errorResult("Could not encode the result.")
     }
