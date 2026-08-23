@@ -30,5 +30,6 @@ struct ProviderTests {
         }.joined()
         #expect(output.contains("Work"))
         #expect(!output.contains("super-secret"))
+        #expect(!output.contains("\n  "))
     }
 }
