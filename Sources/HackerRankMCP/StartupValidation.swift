@@ -4,7 +4,7 @@ import HackerRankKit
 /// Validates configured accounts can reach the HackerRank API before serving MCP tools.
 public func validateHackerRankAccountsOnStartup(_ accountSet: HackerRankMCPAccountSet) async throws {
     try await validateHackerRankAccountsOnStartup(accountSet) { account in
-        let client = HackerRankClient(token: account.token, baseURL: account.baseURL)
+        let client = await HackerRankClient(token: account.token, baseURL: account.baseURL)
         _ = try await client.usersPage(after: nil)
     }
 }
@@ -22,7 +22,7 @@ func validateHackerRankAccountsOnStartup(
     } catch let error as HackerRankError {
         switch error {
         case .missingAPIKey:
-            throw HackerRankMCPConfigError.noAccounts
+            throw HackerRankMCPConfigError.invalidToken(account.name)
         case .http(401, _):
             throw HackerRankMCPConfigError.invalidToken(account.name)
         default:

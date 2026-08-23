@@ -1,3 +1,4 @@
+import Foundation
 import HackerRankKit
 import HackerRankKitMock
 import Testing

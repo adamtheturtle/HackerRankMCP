@@ -1,3 +1,4 @@
+import Foundation
 import HackerRankKit
 import HackerRankKitMock
 @testable import HackerRankMCP
@@ -30,6 +31,14 @@ struct StartupValidationTests {
             #expect(error != .invalidToken("Work"))
         } catch {
             Issue.record("unexpected error \(error)")
+        }
+    }
+
+    @Test func `missing API key maps to invalid token not no accounts`() async throws {
+        let account = HackerRankMCPAccount(name: "Work", token: "")
+        let set = try HackerRankMCPAccountSet(accounts: [account])
+        await #expect(throws: HackerRankMCPConfigError.invalidToken("Work")) {
+            try await validateHackerRankAccountsOnStartup(set)
         }
     }
 }
