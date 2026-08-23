@@ -18,4 +18,11 @@ struct MockIntegrationTests {
         let candidates = try await client.candidatesPage(testID: testID, after: nil)
         #expect(!candidates.items.isEmpty)
     }
+
+    @Test func `mock server team rows include interviewer count`() async throws {
+        let client = await MainActor.run { HackerRankClient.mock(key: "hrmcp-\(UUID().uuidString)") }
+        let page = try await client.teamsPage(after: nil)
+        let team = try #require(page.items.first)
+        #expect(team.interviewerCount == 2)
+    }
 }
