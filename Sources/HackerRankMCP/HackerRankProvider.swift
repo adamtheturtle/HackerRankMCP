@@ -16,16 +16,25 @@ public struct HackerRankProvider: MCPToolProvider {
 
     public func callTool(_ name: String, arguments: [String: Value]?) async -> CallTool.Result {
         guard Self.names.contains(name) else { return errorResult("Unknown tool: \(name)") }
-        let requested = stringArgument(arguments, "account")
-        guard let account = accountSet.resolve(requested) else {
-            return errorResult("No HackerRank account matches “\(requested ?? "")”.")
-        }
-        let cursor = stringArgument(arguments, "cursor")
-        switch name {
-        case "list_accounts":
+
+        // list_accounts is config-local: it must not resolve (or reject) an account
+        // argument, and its schema advertises no properties.
+        if name == "list_accounts" {
+            if let arguments, !arguments.isEmpty {
+                let unexpected = arguments.keys.sorted().joined(separator: ", ")
+                return errorResult("Unexpected argument(s): \(unexpected)")
+            }
             return compactJSONResult(["accounts": accountSet.accounts.map {
                 ["id": $0.id.uuidString, "name": $0.name, "base_url": $0.baseURL.absoluteString]
             }])
+        }
+
+        let requested = stringArgument(arguments, "account")
+        guard let account = accountSet.resolve(requested) else {
+            return errorResult("No HackerRank account matches \"\(requested ?? "")\".")
+        }
+        let cursor = stringArgument(arguments, "cursor")
+        switch name {
         case "list_candidates":
             guard let id = stringArgument(arguments, "test_id") else { return missing("test_id") }
             return await list(name, account: account, cursor: cursor, testID: id)
