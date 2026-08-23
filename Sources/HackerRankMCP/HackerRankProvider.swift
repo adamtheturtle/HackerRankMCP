@@ -162,6 +162,7 @@ public struct HackerRankProvider: MCPToolProvider {
                         "score": $0.score.map { $0 as Any } ?? NSNull(),
                         "percentage_score": $0.percentageScore.map { $0 as Any } ?? NSNull(),
                         "status": $0.status.map { $0 as Any } ?? NSNull(),
+                        "status_label": candidateStatusLabel($0.status).map { $0 as Any } ?? NSNull(),
                         "ats_state": $0.atsState.map { $0 as Any } ?? NSNull(),
                         "integrity_status": $0.integrityStatus.map { $0 as Any } ?? NSNull(),
                         "integrity_summary": $0.integritySummary.map { $0 as Any } ?? NSNull(),
