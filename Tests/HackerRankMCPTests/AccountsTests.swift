@@ -109,6 +109,14 @@ struct AccountsTests {
         #expect(set.resolve(nil)?.name == "Work")
         #expect(set.resolve("eu")?.token == "other")
     }
+
+    @Test func `relative config paths are rejected`() {
+        #expect(throws: HackerRankMCPConfigError.relativeConfigPath("accounts.json")) {
+            try loadHackerRankMCPAccounts(environment: [
+                "HACKERRANK_MCP_CONFIG": "accounts.json",
+            ])
+        }
+    }
 }
 
 private func writeTempConfig(_ contents: String) throws -> URL {
