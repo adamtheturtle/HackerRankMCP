@@ -5,6 +5,7 @@ import MCPKit
 
 do {
     let accounts = try loadHackerRankMCPAccounts()
+    try await validateHackerRankAccountsOnStartup(accounts)
     let provider = HackerRankProvider(accountSet: accounts)
     let server = MCPServer(name: "HackerRank MCP", version: hackerRankMCPVersion, provider: provider)
     try await server.run(transport: StdioTransport())
