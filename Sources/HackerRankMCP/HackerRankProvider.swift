@@ -34,13 +34,12 @@ public struct HackerRankProvider: MCPToolProvider {
     public func callTool(_ name: String, arguments: [String: Value]?) async -> CallTool.Result {
         guard Self.names.contains(name) else { return errorResult("Unknown tool: \(name)") }
 
-        // list_accounts is config-local: it must not resolve (or reject) an account
-        // argument, and its schema advertises no properties.
+        if let unexpected = unexpectedArguments(for: name, in: arguments) {
+            return errorResult("Unexpected argument(s): \(unexpected)")
+        }
+
+        // list_accounts is config-local: it must not resolve an account argument.
         if name == "list_accounts" {
-            if let arguments, !arguments.isEmpty {
-                let unexpected = arguments.keys.sorted().joined(separator: ", ")
-                return errorResult("Unexpected argument(s): \(unexpected)")
-            }
             return compactJSONResult(["accounts": accountSet.accounts.map {
                 ["id": $0.id.uuidString, "name": $0.name, "base_url": $0.baseURL.absoluteString]
             }])
@@ -74,9 +73,27 @@ public struct HackerRankProvider: MCPToolProvider {
         }
     }
 
+    private func unexpectedArguments(for name: String, in arguments: [String: Value]?) -> String? {
+        guard let arguments, !arguments.isEmpty else { return nil }
+        let allowed = Self.allowedArguments[name] ?? []
+        let unknown = arguments.keys.filter { !allowed.contains($0) }.sorted()
+        guard !unknown.isEmpty else { return nil }
+        return unknown.joined(separator: ", ")
+    }
+
     private static let names: Set<String> = [
         "list_accounts", "list_tests", "list_questions", "list_interviews",
         "list_candidates", "list_users", "list_teams",
+    ]
+
+    private static let allowedArguments: [String: Set<String>] = [
+        "list_accounts": [],
+        "list_tests": ["account", "cursor"],
+        "list_questions": ["account", "cursor"],
+        "list_interviews": ["account", "cursor"],
+        "list_candidates": ["account", "cursor", "test_id"],
+        "list_users": ["account", "cursor"],
+        "list_teams": ["account", "cursor"],
     ]
 
     private static var descriptors: [[String: Any]] {
