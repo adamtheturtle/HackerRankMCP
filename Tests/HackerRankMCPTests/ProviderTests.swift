@@ -22,14 +22,53 @@ struct ProviderTests {
         )
 
         let result = await provider.callTool("list_accounts", arguments: nil)
-        let output = result.content.compactMap { content -> String? in
-            if case let .text(text, _, _) = content {
-                return text
-            }
-            return nil
-        }.joined()
+        let output = text(from: result)
         #expect(output.contains("Work"))
         #expect(!output.contains("super-secret"))
         #expect(!output.contains("\n  "))
     }
+
+    @Test func `list accounts ignores account resolution and rejects unexpected args`() async throws {
+        let account = HackerRankMCPAccount(name: "Work", token: "secret")
+        let provider = try HackerRankProvider(
+            accountSet: HackerRankMCPAccountSet(accounts: [account])
+        )
+
+        let ok = await provider.callTool("list_accounts", arguments: nil)
+        #expect(ok.isError != true)
+        #expect(text(from: ok).contains("Work"))
+
+        let bogus = await provider.callTool(
+            "list_accounts",
+            arguments: ["account": .string("missing")]
+        )
+        #expect(bogus.isError == true)
+        #expect(text(from: bogus).contains("Unexpected argument"))
+    }
+
+    @Test func `unknown account error uses ASCII quotes`() async throws {
+        let account = HackerRankMCPAccount(name: "Work", token: "secret")
+        let provider = try HackerRankProvider(
+            accountSet: HackerRankMCPAccountSet(accounts: [account])
+        )
+
+        let result = await provider.callTool(
+            "list_tests",
+            arguments: ["account": .string("nope")]
+        )
+        let message = text(from: result)
+        #expect(result.isError == true)
+        #expect(message.contains("\"nope\""))
+        #expect(!message.contains("“"))
+        #expect(!message.contains("”"))
+    }
+}
+
+private func text(from result: CallTool.Result) -> String {
+    result.content.compactMap { content -> String? in
+        if case let .text(text, _, _) = content {
+            return text
+        }
+        return nil
+    }.joined()
 }
