@@ -51,6 +51,7 @@ public enum HackerRankMCPConfigError: LocalizedError, Equatable {
     case duplicateNames
     case invalidDefaultAccount
     case invalidBaseURL(String)
+    case invalidConfig(String)
 
     public var errorDescription: String? {
         switch self {
@@ -58,6 +59,7 @@ public enum HackerRankMCPConfigError: LocalizedError, Equatable {
         case .duplicateNames: "HackerRank account names must be unique."
         case .invalidDefaultAccount: "The default HackerRank account is not configured."
         case let .invalidBaseURL(value): "Unsupported HackerRank base URL: \(value)"
+        case let .invalidConfig(detail): "Invalid HackerRank MCP config: \(detail)"
         }
     }
 }
@@ -83,18 +85,12 @@ public func loadHackerRankMCPAccounts(
     environment: [String: String] = ProcessInfo.processInfo.environment
 ) throws -> HackerRankMCPAccountSet {
     if let path = environment["HACKERRANK_MCP_CONFIG"], !path.isEmpty {
-        let data = try Data(contentsOf: URL(fileURLWithPath: path))
-        let config = try JSONDecoder().decode(ConfigFile.self, from: data)
-        var defaultID: UUID?
-        let accounts = try config.accounts.map { item in
-            let baseURL = try validatedBaseURL(item.baseURL)
-            let account = HackerRankMCPAccount(name: item.name, token: item.token, baseURL: baseURL)
-            if item.isDefault == true {
-                defaultID = account.id
-            }
-            return account
+        let url = URL(fileURLWithPath: path)
+        if FileManager.default.fileExists(atPath: url.path) {
+            return try loadAccounts(fromConfigFileAt: url)
         }
-        return try HackerRankMCPAccountSet(accounts: accounts, defaultAccountID: defaultID)
+        // Missing file: fall through to env-var accounts so a stale path does not
+        // block an otherwise valid HACKERRANK_API_TOKEN setup.
     }
 
     guard let token = environment["HACKERRANK_API_TOKEN"], !token.isEmpty else {
@@ -108,6 +104,59 @@ public func loadHackerRankMCPAccounts(
             baseURL: baseURL
         ),
     ])
+}
+
+private func loadAccounts(fromConfigFileAt url: URL) throws -> HackerRankMCPAccountSet {
+    let data: Data
+    do {
+        data = try Data(contentsOf: url)
+    } catch {
+        throw HackerRankMCPConfigError.invalidConfig("could not read \(url.path): \(error.localizedDescription)")
+    }
+
+    let config: ConfigFile
+    do {
+        config = try JSONDecoder().decode(ConfigFile.self, from: data)
+    } catch let error as DecodingError {
+        throw HackerRankMCPConfigError.invalidConfig(decodingErrorDescription(error))
+    } catch {
+        throw HackerRankMCPConfigError.invalidConfig(error.localizedDescription)
+    }
+
+    var defaultID: UUID?
+    let accounts = try config.accounts.map { item in
+        let baseURL = try validatedBaseURL(item.baseURL)
+        let account = HackerRankMCPAccount(name: item.name, token: item.token, baseURL: baseURL)
+        if item.isDefault == true {
+            defaultID = account.id
+        }
+        return account
+    }
+    return try HackerRankMCPAccountSet(accounts: accounts, defaultAccountID: defaultID)
+}
+
+private func decodingErrorDescription(_ error: DecodingError) -> String {
+    switch error {
+    case let .keyNotFound(key, context):
+        let path = codingPath(context.codingPath + [key])
+        return "missing required field \(path)"
+    case let .typeMismatch(type, context):
+        return "expected \(type) at \(codingPath(context.codingPath))"
+    case let .valueNotFound(type, context):
+        return "expected \(type) at \(codingPath(context.codingPath)) but found null"
+    case let .dataCorrupted(context):
+        if context.codingPath.isEmpty {
+            return context.debugDescription.isEmpty ? "malformed JSON" : context.debugDescription
+        }
+        return "invalid value at \(codingPath(context.codingPath)): \(context.debugDescription)"
+    @unknown default:
+        return error.localizedDescription
+    }
+}
+
+private func codingPath(_ path: [CodingKey]) -> String {
+    guard !path.isEmpty else { return "(root)" }
+    return path.map(\.stringValue).joined(separator: ".")
 }
 
 private func validatedBaseURL(_ value: String?) throws -> URL {
