@@ -55,7 +55,7 @@ jobs:
         run: |
           set -euo pipefail
           version="${RELEASE_TAG#v}"
-          grep -Fq "public let hackerRankMCPVersion = \"$version\"" Sources/HackerRankMCP/ReleaseVersion.swift
+          grep -Fq "public static let semver = \"$version\"" Sources/HackerRankMCP/ReleaseVersion.swift
           swift test
       - name: Build macOS universal executable
         shell: bash
