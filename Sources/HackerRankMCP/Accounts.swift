@@ -25,6 +25,10 @@ public struct HackerRankMCPAccountSet: Sendable {
 
     public init(accounts: [HackerRankMCPAccount], defaultAccountID: UUID? = nil) throws {
         guard let first = accounts.first else { throw HackerRankMCPConfigError.noAccounts }
+        for account in accounts {
+            let trimmed = account.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { throw HackerRankMCPConfigError.blankAccountName }
+        }
         let names = accounts.map { $0.name.lowercased() }
         guard Set(names).count == names.count else { throw HackerRankMCPConfigError.duplicateNames }
         let selected = defaultAccountID ?? first.id
@@ -54,6 +58,9 @@ public enum HackerRankMCPConfigError: LocalizedError, Equatable {
     case invalidConfig(String)
     case invalidToken(String)
     case startupValidationFailed(String, String)
+    case multipleDefaults
+    case blankAccountName
+    case emptyToken(String)
 
     public var errorDescription: String? {
         switch self {
@@ -65,6 +72,9 @@ public enum HackerRankMCPConfigError: LocalizedError, Equatable {
         case let .invalidToken(name): "HackerRank account \"\(name)\" has an invalid API token."
         case let .startupValidationFailed(name, detail):
             "Could not validate HackerRank account \"\(name)\": \(detail)"
+        case .multipleDefaults: "Only one HackerRank account may be marked as default."
+        case .blankAccountName: "HackerRank account names must not be blank."
+        case let .emptyToken(name): "HackerRank account \"\(name)\" has an empty API token."
         }
     }
 }
@@ -94,21 +104,19 @@ public func loadHackerRankMCPAccounts(
         if FileManager.default.fileExists(atPath: url.path) {
             return try loadAccounts(fromConfigFileAt: url)
         }
-        // Missing file: fall through to env-var accounts so a stale path does not
-        // block an otherwise valid HACKERRANK_API_TOKEN setup.
     }
 
-    guard let token = environment["HACKERRANK_API_TOKEN"], !token.isEmpty else {
-        throw HackerRankMCPConfigError.noAccounts
+    if let token = environment["HACKERRANK_API_TOKEN"] {
+        guard !token.isEmpty else { throw HackerRankMCPConfigError.emptyToken("HackerRank") }
+        let baseURL = try validatedBaseURL(environment["HACKERRANK_BASE_URL"])
+        let name = environment["HACKERRANK_ACCOUNT_NAME"] ?? "HackerRank"
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { throw HackerRankMCPConfigError.blankAccountName }
+        return try HackerRankMCPAccountSet(accounts: [
+            HackerRankMCPAccount(name: trimmedName, token: token, baseURL: baseURL),
+        ])
     }
-    let baseURL = try validatedBaseURL(environment["HACKERRANK_BASE_URL"])
-    return try HackerRankMCPAccountSet(accounts: [
-        HackerRankMCPAccount(
-            name: environment["HACKERRANK_ACCOUNT_NAME"] ?? "HackerRank",
-            token: token,
-            baseURL: baseURL
-        ),
-    ])
+    throw HackerRankMCPConfigError.noAccounts
 }
 
 private func loadAccounts(fromConfigFileAt url: URL) throws -> HackerRankMCPAccountSet {
@@ -129,10 +137,16 @@ private func loadAccounts(fromConfigFileAt url: URL) throws -> HackerRankMCPAcco
     }
 
     var defaultID: UUID?
+    var sawDefault = false
     let accounts = try config.accounts.map { item in
+        let trimmedName = item.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { throw HackerRankMCPConfigError.blankAccountName }
+        guard !item.token.isEmpty else { throw HackerRankMCPConfigError.emptyToken(trimmedName) }
         let baseURL = try validatedBaseURL(item.baseURL)
-        let account = HackerRankMCPAccount(name: item.name, token: item.token, baseURL: baseURL)
+        let account = HackerRankMCPAccount(name: trimmedName, token: item.token, baseURL: baseURL)
         if item.isDefault == true {
+            if sawDefault { throw HackerRankMCPConfigError.multipleDefaults }
+            sawDefault = true
             defaultID = account.id
         }
         return account
@@ -170,7 +184,8 @@ private func validatedBaseURL(_ value: String?) throws -> URL {
     }
     guard let url = URL(string: value),
           url.scheme?.lowercased() == "https",
-          url.host != nil,
+          let host = url.host,
+          !host.isEmpty,
           url.user == nil,
           url.password == nil,
           url.query == nil,
@@ -178,5 +193,18 @@ private func validatedBaseURL(_ value: String?) throws -> URL {
     else {
         throw HackerRankMCPConfigError.invalidBaseURL(value)
     }
+
+    let path = url.path
+    if path != "" && path != "/" {
+        throw HackerRankMCPConfigError.invalidBaseURL(value)
+    }
+    if value.hasSuffix("/") {
+        throw HackerRankMCPConfigError.invalidBaseURL(value)
+    }
+    let normalizedHost = host.lowercased()
+    if normalizedHost == "127.0.0.1" || normalizedHost == "localhost" || normalizedHost == "::1" {
+        throw HackerRankMCPConfigError.invalidBaseURL(value)
+    }
+
     return url
 }
