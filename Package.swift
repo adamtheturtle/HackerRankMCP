@@ -30,6 +30,12 @@ let package = Package(
                 .product(name: "MCPKit", package: "MCPKit"),
             ]
         ),
-        .testTarget(name: "HackerRankMCPTests", dependencies: ["HackerRankMCP"]),
+        .testTarget(
+            name: "HackerRankMCPTests",
+            dependencies: [
+                "HackerRankMCP",
+                .product(name: "HackerRankKitMock", package: "HackerRankKit"),
+            ]
+        ),
     ]
 )
