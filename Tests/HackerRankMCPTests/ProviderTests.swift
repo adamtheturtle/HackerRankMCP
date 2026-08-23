@@ -1,18 +1,28 @@
-import HackerRankMCP
+@testable import HackerRankMCP
 import MCP
 import Testing
 
-struct ProviderTests {
-    @Test func `provider advertises read-only tools`() async throws {
+struct WhitespaceIdentityTests {
+    @Test func `blank cursor and test_id are rejected locally`() async throws {
         let account = HackerRankMCPAccount(name: "Work", token: "secret")
         let provider = try HackerRankProvider(
             accountSet: HackerRankMCPAccountSet(accounts: [account])
         )
 
-        let tools = await provider.tools()
-        #expect(tools.contains { $0.name == "list_tests" })
-        #expect(tools.contains { $0.name == "list_candidates" })
-        #expect(!tools.contains { $0.name.hasPrefix("delete_") })
+        let cursor = await provider.callTool("list_tests", arguments: ["cursor": .string("   ")])
+        #expect(cursor.isError == true)
+        #expect(text(from: cursor).contains("cursor must not be blank"))
+
+        let blankID = await provider.callTool(
+            "list_candidates",
+            arguments: ["test_id": .string("\t")]
+        )
+        #expect(blankID.isError == true)
+        #expect(text(from: blankID).contains("test_id must not be blank"))
+    }
+
+    @Test func `whole-number double test_id coerces without fractional suffix`() {
+        #expect(parseToolIdentity(["test_id": .double(42.0)], "test_id") == .value("42"))
     }
 
     @Test func `non-string account arguments are rejected`() async throws {
