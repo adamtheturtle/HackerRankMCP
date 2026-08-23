@@ -23,7 +23,7 @@ public struct HackerRankProvider: MCPToolProvider {
         let cursor = stringArgument(arguments, "cursor")
         switch name {
         case "list_accounts":
-            return jsonResult(["accounts": accountSet.accounts.map {
+            return compactJSONResult(["accounts": accountSet.accounts.map {
                 ["id": $0.id.uuidString, "name": $0.name, "base_url": $0.baseURL.absoluteString]
             }])
         case "list_candidates":
@@ -173,7 +173,7 @@ public struct HackerRankProvider: MCPToolProvider {
             default:
                 return errorResult("Unknown tool: \(name)")
             }
-            return jsonResult(payload)
+            return compactJSONResult(payload)
         } catch {
             return errorResult(error.localizedDescription)
         }
@@ -197,15 +197,14 @@ public struct HackerRankProvider: MCPToolProvider {
     }
 }
 
-private func jsonResult(_ value: Any) -> CallTool.Result {
-    guard let data = try? JSONSerialization.data(
-        withJSONObject: value,
-        options: [.prettyPrinted, .sortedKeys]
-    ) else {
+private func compactJSONResult(_ value: Any) -> CallTool.Result {
+    // Avoid `.prettyPrinted` — MCP clients pay per token for whitespace.
+    guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else {
         return errorResult("Could not encode the result.")
     }
+    let text = String(decoding: data, as: UTF8.self)
     return CallTool.Result(
-        content: [.text(text: String(decoding: data, as: UTF8.self), annotations: nil, _meta: nil)]
+        content: [.text(text: text, annotations: nil, _meta: nil)]
     )
 }
 
