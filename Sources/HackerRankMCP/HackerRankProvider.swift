@@ -120,7 +120,16 @@ public struct HackerRankProvider: MCPToolProvider {
             case "list_questions":
                 let page = try await client.questionsPage(after: cursor)
                 payload = pagePayload(page, key: "questions", account: account) {
-                    ["id": $0.id, "name": $0.name, "type": $0.type]
+                    [
+                        "id": $0.id,
+                        "name": $0.name,
+                        "type": $0.type,
+                        "status": $0.status.map { $0 as Any } ?? NSNull(),
+                        "owner": $0.owner.map { $0 as Any } ?? NSNull(),
+                        "tags": $0.tags.map { $0 as Any } ?? NSNull(),
+                        "languages": $0.languages.map { $0 as Any } ?? NSNull(),
+                        "recommended_duration": $0.recommendedDuration.map { $0 as Any } ?? NSNull(),
+                    ]
                 }
             case "list_interviews":
                 let page = try await client.interviewsPage(after: cursor)
