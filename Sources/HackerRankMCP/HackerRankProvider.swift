@@ -46,7 +46,11 @@ public struct HackerRankProvider: MCPToolProvider {
             }])
         }
 
-        let requested = stringArgument(arguments, "account")
+        let accountArg = typedStringArgument(arguments, "account")
+        if case .invalidType = accountArg {
+            return errorResult("account must be a string account name or UUID.")
+        }
+        let requested = accountArg.stringValue
         guard let account = accountSet.resolve(requested) else {
             return errorResult("No HackerRank account matches \"\(requested ?? "")\".")
         }
@@ -277,6 +281,26 @@ func toolErrorMessage(_ error: Error) -> String {
         }
     }
     return "The HackerRank request failed."
+}
+
+private enum TypedStringArgument {
+    case missing
+    case invalidType
+    case value(String)
+
+    var stringValue: String? {
+        if case let .value(value) = self { return value }
+        return nil
+    }
+}
+
+private func typedStringArgument(_ arguments: [String: Value]?, _ key: String) -> TypedStringArgument {
+    guard let arguments, let value = arguments[key] else { return .missing }
+    switch value {
+    case let .string(string): return .value(string)
+    case .null: return .missing
+    default: return .invalidType
+    }
 }
 
 private func compactJSONResult(_ value: Any) -> CallTool.Result {
