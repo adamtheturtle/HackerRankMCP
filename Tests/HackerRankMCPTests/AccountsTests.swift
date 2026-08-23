@@ -50,6 +50,18 @@ struct AccountsTests {
                 "HACKERRANK_BASE_URL": "https://127.0.0.1",
             ])
         }
+        #expect(throws: HackerRankMCPConfigError.invalidBaseURL("https://localhost.")) {
+            try loadHackerRankMCPAccounts(environment: [
+                "HACKERRANK_API_TOKEN": "secret",
+                "HACKERRANK_BASE_URL": "https://localhost.",
+            ])
+        }
+        #expect(throws: HackerRankMCPConfigError.invalidBaseURL("https://[0:0:0:0:0:0:0:1]")) {
+            try loadHackerRankMCPAccounts(environment: [
+                "HACKERRANK_API_TOKEN": "secret",
+                "HACKERRANK_BASE_URL": "https://[0:0:0:0:0:0:0:1]",
+            ])
+        }
     }
 
     @Test func `blank account names are rejected`() {
