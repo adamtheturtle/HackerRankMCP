@@ -265,6 +265,7 @@ public struct HackerRankProvider: MCPToolProvider {
                         "departments": $0.departments.map { $0 as Any } ?? NSNull(),
                         "recruiters": $0.recruiterCount.map { $0 as Any } ?? NSNull(),
                         "developers": $0.developerCount.map { $0 as Any } ?? NSNull(),
+                        "interviewers": $0.interviewerCount.map { $0 as Any } ?? NSNull(),
                         "recruiter_cap": $0.recruiterCap.map { $0 as Any } ?? NSNull(),
                         "developer_cap": $0.developerCap.map { $0 as Any } ?? NSNull(),
                     ]
