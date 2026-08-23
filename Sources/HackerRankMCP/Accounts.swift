@@ -61,6 +61,7 @@ public enum HackerRankMCPConfigError: LocalizedError, Equatable {
     case multipleDefaults
     case blankAccountName
     case emptyToken(String)
+    case relativeConfigPath(String)
 
     public var errorDescription: String? {
         switch self {
@@ -75,6 +76,8 @@ public enum HackerRankMCPConfigError: LocalizedError, Equatable {
         case .multipleDefaults: "Only one HackerRank account may be marked as default."
         case .blankAccountName: "HackerRank account names must not be blank."
         case let .emptyToken(name): "HackerRank account \"\(name)\" has an empty API token."
+        case let .relativeConfigPath(value):
+            "HACKERRANK_MCP_CONFIG must be an absolute path (got \"\(value)\")."
         }
     }
 }
@@ -100,7 +103,11 @@ public func loadHackerRankMCPAccounts(
     environment: [String: String] = ProcessInfo.processInfo.environment
 ) throws -> HackerRankMCPAccountSet {
     if let path = environment["HACKERRANK_MCP_CONFIG"], !path.isEmpty {
-        let url = URL(fileURLWithPath: path)
+        let expanded = (path as NSString).expandingTildeInPath
+        guard (expanded as NSString).isAbsolutePath else {
+            throw HackerRankMCPConfigError.relativeConfigPath(path)
+        }
+        let url = URL(fileURLWithPath: expanded)
         if FileManager.default.fileExists(atPath: url.path) {
             return try loadAccounts(fromConfigFileAt: url)
         }
