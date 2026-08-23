@@ -25,6 +25,11 @@ struct ProviderTests {
         #expect(parseToolIdentity(["test_id": .double(42.0)], "test_id") == .value("42"))
     }
 
+    @Test func `null identity arguments are treated as missing`() {
+        #expect(parseToolIdentity(["cursor": .null], "cursor") == .missing)
+        #expect(parseToolIdentity(["test_id": .null], "test_id") == .missing)
+    }
+
     @Test func `non-string account arguments are rejected`() async throws {
         let account = HackerRankMCPAccount(name: "Work", token: "secret")
         let provider = try HackerRankProvider(
