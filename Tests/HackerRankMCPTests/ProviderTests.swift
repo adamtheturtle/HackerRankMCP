@@ -2,7 +2,7 @@
 import MCP
 import Testing
 
-struct WhitespaceIdentityTests {
+struct ProviderTests {
     @Test func `blank cursor and test_id are rejected locally`() async throws {
         let account = HackerRankMCPAccount(name: "Work", token: "secret")
         let provider = try HackerRankProvider(
@@ -86,6 +86,21 @@ struct WhitespaceIdentityTests {
         #expect(!message.contains("“"))
         #expect(!message.contains("”"))
     }
+
+    @Test func `unknown tool arguments are rejected at runtime`() async throws {
+        let account = HackerRankMCPAccount(name: "Work", token: "secret")
+        let provider = try HackerRankProvider(
+            accountSet: HackerRankMCPAccountSet(accounts: [account])
+        )
+
+        let result = await provider.callTool(
+            "list_tests",
+            arguments: ["account": .string("Work"), "limit": .int(10)]
+        )
+        #expect(result.isError == true)
+        #expect(text(from: result).contains("Unexpected argument"))
+        #expect(text(from: result).contains("limit"))
+    }
 }
 
 private func text(from result: CallTool.Result) -> String {
@@ -93,13 +108,6 @@ private func text(from result: CallTool.Result) -> String {
         if case let .text(text, _, _) = content {
             return text
         }
-        return nil
-    }.joined()
-}
-
-private func text(from result: CallTool.Result) -> String {
-    result.content.compactMap { content -> String? in
-        if case let .text(text, _, _) = content { return text }
         return nil
     }.joined()
 }
