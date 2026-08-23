@@ -54,13 +54,23 @@ public struct HackerRankProvider: MCPToolProvider {
         guard let account = accountSet.resolve(requested) else {
             return errorResult("No HackerRank account matches \"\(requested ?? "")\".")
         }
-        let cursor = stringArgument(arguments, "cursor")
+
+        let cursorResult = requiredIdentity(arguments, "cursor", required: false)
+        if case let .error(message) = cursorResult { return errorResult(message) }
+
         switch name {
         case "list_candidates":
-            guard let id = stringArgument(arguments, "test_id") else { return missing("test_id") }
-            return await list(name, account: account, cursor: cursor, testID: id)
+            let testIDResult = requiredIdentity(arguments, "test_id", required: true)
+            switch testIDResult {
+            case let .error(message):
+                return errorResult(message)
+            case .missing:
+                return missing("test_id")
+            case let .value(id):
+                return await list(name, account: account, cursor: cursorResult.value, testID: id)
+            }
         default:
-            return await list(name, account: account, cursor: cursor)
+            return await list(name, account: account, cursor: cursorResult.value)
         }
     }
 
@@ -300,6 +310,60 @@ private func typedStringArgument(_ arguments: [String: Value]?, _ key: String) -
     case let .string(string): return .value(string)
     case .null: return .missing
     default: return .invalidType
+    }
+}
+
+private enum IdentityArgument {
+    case missing
+    case value(String)
+    case error(String)
+
+    var value: String? {
+        if case let .value(value) = self { return value }
+        return nil
+    }
+}
+
+enum ParsedToolIdentity: Equatable {
+    case missing
+    case value(String)
+    case invalid(String)
+}
+
+func parseToolIdentity(
+    _ arguments: [String: Value]?,
+    _ key: String
+) -> ParsedToolIdentity {
+    guard let arguments, let raw = arguments[key] else { return .missing }
+    let string: String
+    switch raw {
+    case let .string(value): string = value
+    case let .int(value): string = String(value)
+    case let .double(value):
+        if value.rounded() == value, value >= Double(Int.min), value <= Double(Int.max) {
+            string = String(Int(value))
+        } else {
+            string = String(value)
+        }
+    default:
+        return .invalid("\(key) must be a string or number identifier.")
+    }
+    let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+    if trimmed.isEmpty {
+        return .invalid("\(key) must not be blank.")
+    }
+    return .value(trimmed)
+}
+
+private func requiredIdentity(
+    _ arguments: [String: Value]?,
+    _ key: String,
+    required: Bool
+) -> IdentityArgument {
+    switch parseToolIdentity(arguments, key) {
+    case let .invalid(message): return .error(message)
+    case let .value(value): return .value(value)
+    case .missing: return .missing
     }
 }
 
