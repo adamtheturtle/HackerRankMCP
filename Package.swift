@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "HackerRankMCP",
-    platforms: [.macOS(.v15)],
+    platforms: [.macOS(.v15), .linux],
     products: [
         .library(name: "HackerRankMCP", targets: ["HackerRankMCP"]),
         .executable(name: "hackerrank-mcp", targets: ["hackerrank-mcp"]),
