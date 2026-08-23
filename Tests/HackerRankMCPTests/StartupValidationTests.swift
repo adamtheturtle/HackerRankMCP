@@ -9,7 +9,9 @@ struct StartupValidationTests {
         let account = HackerRankMCPAccount(name: "Work", token: "demo")
         let set = try HackerRankMCPAccountSet(accounts: [account])
         try await validateHackerRankAccountsOnStartup(set) { account in
-            let client = HackerRankClient.mock(key: "startup-\(account.name)-\(UUID().uuidString)")
+            let client = await MainActor.run {
+                HackerRankClient.mock(key: "startup-\(account.name)-\(UUID().uuidString)")
+            }
             _ = try await client.usersPage(after: nil)
         }
     }
@@ -35,10 +37,12 @@ struct StartupValidationTests {
     }
 
     @Test func `missing API key maps to invalid token not no accounts`() async throws {
-        let account = HackerRankMCPAccount(name: "Work", token: "")
+        let account = HackerRankMCPAccount(name: "Work", token: "secret")
         let set = try HackerRankMCPAccountSet(accounts: [account])
         await #expect(throws: HackerRankMCPConfigError.invalidToken("Work")) {
-            try await validateHackerRankAccountsOnStartup(set)
+            try await validateHackerRankAccountsOnStartup(set) { _ in
+                throw HackerRankError.missingAPIKey
+            }
         }
     }
 }
