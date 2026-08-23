@@ -119,6 +119,36 @@ struct AccountsTests {
     }
 }
 
+    @Test func `missing config file falls back to env token`() throws {
+        let missing = FileManager.default.temporaryDirectory
+            .appendingPathComponent("hackerrank-mcp-missing-\(UUID().uuidString).json")
+        let set = try loadHackerRankMCPAccounts(environment: [
+            "HACKERRANK_MCP_CONFIG": missing.path,
+            "HACKERRANK_API_TOKEN": "from-env",
+        ])
+        #expect(set.resolve(nil)?.token == "from-env")
+    }
+
+    @Test func `unreadable config file does not fall back to env token`() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("hackerrank-mcp-unreadable-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let config = dir.appendingPathComponent("accounts.json")
+        try Data(#"{"accounts":[{"name":"Work","token":"file-token"}]}"#.utf8).write(to: config)
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: dir.path)
+            try? FileManager.default.removeItem(at: dir)
+        }
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: dir.path)
+
+        #expect(throws: HackerRankMCPConfigError.self) {
+            try loadHackerRankMCPAccounts(environment: [
+                "HACKERRANK_MCP_CONFIG": config.path,
+                "HACKERRANK_API_TOKEN": "from-env",
+            ])
+        }
+    }
+
 private func writeTempConfig(_ contents: String) throws -> URL {
     let url = FileManager.default.temporaryDirectory
         .appendingPathComponent("hackerrank-mcp-\(UUID().uuidString).json")
