@@ -217,11 +217,10 @@ public struct HackerRankProvider: MCPToolProvider {
             }
             return compactJSONResult(payload)
         } catch {
-            return errorResult(error.localizedDescription)
+            return errorResult(toolErrorMessage(error))
         }
     }
 
-    @MainActor
     private func pagePayload<Item: Sendable>(
         _ page: Page<Item>,
         key: String,
@@ -237,6 +236,22 @@ public struct HackerRankProvider: MCPToolProvider {
             "next_cursor": page.next ?? NSNull(),
         ]
     }
+}
+
+func toolErrorMessage(_ error: Error) -> String {
+    if let error = error as? HackerRankError {
+        switch error {
+        case .missingAPIKey:
+            return "Missing HackerRank API token."
+        case let .http(status, _):
+            return "HackerRank API request failed (HTTP \(status))."
+        case .decode:
+            return "Could not decode the HackerRank API response."
+        case .network:
+            return "Could not reach the HackerRank API."
+        }
+    }
+    return "The HackerRank request failed."
 }
 
 private func compactJSONResult(_ value: Any) -> CallTool.Result {
