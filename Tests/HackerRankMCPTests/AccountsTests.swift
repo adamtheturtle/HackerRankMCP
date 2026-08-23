@@ -30,4 +30,56 @@ struct AccountsTests {
             ])
         }
     }
+
+    @Test func `missing config file falls back to environment token`() throws {
+        let missing = FileManager.default.temporaryDirectory
+            .appendingPathComponent("hackerrank-mcp-missing-\(UUID().uuidString).json")
+        let set = try loadHackerRankMCPAccounts(environment: [
+            "HACKERRANK_MCP_CONFIG": missing.path,
+            "HACKERRANK_API_TOKEN": "secret",
+            "HACKERRANK_ACCOUNT_NAME": "Fallback",
+        ])
+        #expect(set.accounts.count == 1)
+        #expect(set.accounts[0].name == "Fallback")
+        #expect(set.accounts[0].token == "secret")
+    }
+
+    @Test func `invalid JSON config surfaces domain error`() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("hackerrank-mcp-\(UUID().uuidString).json")
+        try Data("{not-json".utf8).write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        do {
+            _ = try loadHackerRankMCPAccounts(environment: ["HACKERRANK_MCP_CONFIG": url.path])
+            Issue.record("Expected invalidConfig")
+        } catch let error as HackerRankMCPConfigError {
+            guard case .invalidConfig = error else {
+                Issue.record("Expected invalidConfig, got \(error)")
+                return
+            }
+        } catch {
+            Issue.record("Expected HackerRankMCPConfigError, got \(error)")
+        }
+    }
+
+    @Test func `missing required config field surfaces domain error`() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("hackerrank-mcp-\(UUID().uuidString).json")
+        try Data(#"{"accounts":[{"token":"secret"}]}"#.utf8).write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        do {
+            _ = try loadHackerRankMCPAccounts(environment: ["HACKERRANK_MCP_CONFIG": url.path])
+            Issue.record("Expected invalidConfig")
+        } catch let error as HackerRankMCPConfigError {
+            guard case let .invalidConfig(detail) = error else {
+                Issue.record("Expected invalidConfig, got \(error)")
+                return
+            }
+            #expect(detail.contains("name"))
+        } catch {
+            Issue.record("Expected HackerRankMCPConfigError, got \(error)")
+        }
+    }
 }
