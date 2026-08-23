@@ -139,6 +139,11 @@ public struct HackerRankProvider: MCPToolProvider {
                         "percentage_score": $0.percentageScore.map { $0 as Any } ?? NSNull(),
                         "status": $0.status.map { $0 as Any } ?? NSNull(),
                         "ats_state": $0.atsState.map { $0 as Any } ?? NSNull(),
+                        "integrity_status": $0.integrityStatus.map { $0 as Any } ?? NSNull(),
+                        "integrity_summary": $0.integritySummary.map { $0 as Any } ?? NSNull(),
+                        "attempt_start_time": $0.attemptStartTime.map { $0 as Any } ?? NSNull(),
+                        "attempt_end_time": $0.attemptEndTime.map { $0 as Any } ?? NSNull(),
+                        "invited_on": $0.invitedOn.map { $0 as Any } ?? NSNull(),
                         // Whether an invite is still usable is a question an agent asks
                         // constantly, and the client only began decoding it in 0.8.0.
                         "invite_valid": $0.inviteValid.map { $0 as Any } ?? NSNull(),
