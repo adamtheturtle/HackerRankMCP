@@ -153,6 +153,15 @@ public struct HackerRankProvider: MCPToolProvider {
                         "first_name": $0.firstName ?? "",
                         "last_name": $0.lastName ?? "",
                         "role": $0.role ?? "",
+                        "status": $0.status.map { $0 as Any } ?? NSNull(),
+                        "teams": $0.teams.map { $0 as Any } ?? NSNull(),
+                        "activated": $0.activated.map { $0 as Any } ?? NSNull(),
+                        "company_admin": $0.companyAdmin.map { $0 as Any } ?? NSNull(),
+                        "team_admin": $0.teamAdmin.map { $0 as Any } ?? NSNull(),
+                        "questions_permission": $0.questionsPermission.map { $0 as Any } ?? NSNull(),
+                        "tests_permission": $0.testsPermission.map { $0 as Any } ?? NSNull(),
+                        "interviews_permission": $0.interviewsPermission.map { $0 as Any } ?? NSNull(),
+                        "candidates_permission": $0.candidatesPermission.map { $0 as Any } ?? NSNull(),
                     ]
                 }
             case "list_teams":
