@@ -82,4 +82,23 @@ struct AccountsTests {
             Issue.record("Expected HackerRankMCPConfigError, got \(error)")
         }
     }
+
+    @Test func `valid config file loads accounts and default`() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("hackerrank-mcp-\(UUID().uuidString).json")
+        try Data(
+            """
+            {"accounts":[
+              {"name":"Work","token":"secret","base_url":"https://www.hackerrank.com","default":true},
+              {"name":"EU","token":"other"}
+            ]}
+            """.utf8
+        ).write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let set = try loadHackerRankMCPAccounts(environment: ["HACKERRANK_MCP_CONFIG": url.path])
+        #expect(set.accounts.count == 2)
+        #expect(set.resolve(nil)?.name == "Work")
+        #expect(set.resolve("eu")?.token == "other")
+    }
 }
