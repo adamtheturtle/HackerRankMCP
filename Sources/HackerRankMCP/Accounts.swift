@@ -1,4 +1,5 @@
 import Foundation
+import Network
 
 public struct HackerRankMCPAccount: Codable, Hashable, Identifiable, Sendable {
     public let id: UUID
@@ -208,10 +209,27 @@ private func validatedBaseURL(_ value: String?) throws -> URL {
     if value.hasSuffix("/") {
         throw HackerRankMCPConfigError.invalidBaseURL(value)
     }
-    let normalizedHost = host.lowercased()
-    if normalizedHost == "127.0.0.1" || normalizedHost == "localhost" || normalizedHost == "::1" {
+    if isLoopbackHost(host) {
         throw HackerRankMCPConfigError.invalidBaseURL(value)
     }
 
     return url
+}
+
+/// Returns true for loopback hosts, including trailing-dot DNS forms and IPv6 expansions.
+private func isLoopbackHost(_ host: String) -> Bool {
+    var normalized = host.lowercased()
+    while normalized.hasSuffix(".") {
+        normalized.removeLast()
+    }
+    if normalized == "localhost" {
+        return true
+    }
+    if let v4 = IPv4Address(normalized), v4.isLoopback {
+        return true
+    }
+    if let v6 = IPv6Address(normalized), v6.isLoopback {
+        return true
+    }
+    return false
 }
