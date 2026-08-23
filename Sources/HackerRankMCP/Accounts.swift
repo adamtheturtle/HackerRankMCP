@@ -52,6 +52,8 @@ public enum HackerRankMCPConfigError: LocalizedError, Equatable {
     case invalidDefaultAccount
     case invalidBaseURL(String)
     case invalidConfig(String)
+    case invalidToken(String)
+    case startupValidationFailed(String, String)
 
     public var errorDescription: String? {
         switch self {
@@ -60,6 +62,9 @@ public enum HackerRankMCPConfigError: LocalizedError, Equatable {
         case .invalidDefaultAccount: "The default HackerRank account is not configured."
         case let .invalidBaseURL(value): "Unsupported HackerRank base URL: \(value)"
         case let .invalidConfig(detail): "Invalid HackerRank MCP config: \(detail)"
+        case let .invalidToken(name): "HackerRank account \"\(name)\" has an invalid API token."
+        case let .startupValidationFailed(name, detail):
+            "Could not validate HackerRank account \"\(name)\": \(detail)"
         }
     }
 }
