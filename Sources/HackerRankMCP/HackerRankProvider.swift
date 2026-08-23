@@ -106,8 +106,13 @@ public struct HackerRankProvider: MCPToolProvider {
                 payload = pagePayload(page, key: "tests", account: account) {
                     [
                         "id": $0.id,
+                        "unique_id": $0.uniqueID.map { $0 as Any } ?? NSNull(),
                         "name": $0.name,
                         "state": $0.state ?? "",
+                        "owner": $0.owner.map { $0 as Any } ?? NSNull(),
+                        "draft": $0.draft.map { $0 as Any } ?? NSNull(),
+                        "locked": $0.locked.map { $0 as Any } ?? NSNull(),
+                        "created_at": $0.createdAt.map { $0 as Any } ?? NSNull(),
                         // The assessment window only started decoding in HackerRankKit
                         // 0.8.0: the wire keys are `starttime`/`endtime`, and the client
                         // had been reading `start_time`/`end_time`, so these were always
