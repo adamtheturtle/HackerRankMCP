@@ -228,10 +228,18 @@ public struct HackerRankProvider: MCPToolProvider {
         account: HackerRankMCPAccount,
         transform: (Item) -> [String: Any]
     ) -> [String: Any] {
-        [
+        let items = page.items.compactMap { item -> [String: Any]? in
+            let row = transform(item)
+            guard let id = row["id"] as? String,
+                  !id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return nil
+            }
+            return row
+        }
+        return [
             "account": account.name,
-            key: page.items.map(transform),
-            "returned_count": page.items.count,
+            key: items,
+            "returned_count": items.count,
             "total_count": page.totalCount.map { $0 as Any } ?? NSNull(),
             "has_more": page.next != nil,
             "next_cursor": page.next ?? NSNull(),
