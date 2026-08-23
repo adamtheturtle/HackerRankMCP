@@ -161,6 +161,10 @@ public struct HackerRankProvider: MCPToolProvider {
                     [
                         "id": $0.id,
                         "name": $0.name,
+                        "owner": $0.owner.map { $0 as Any } ?? NSNull(),
+                        "created_at": $0.createdAt.map { $0 as Any } ?? NSNull(),
+                        "locations": $0.locations.map { $0 as Any } ?? NSNull(),
+                        "departments": $0.departments.map { $0 as Any } ?? NSNull(),
                         "recruiters": $0.recruiterCount.map { $0 as Any } ?? NSNull(),
                         "developers": $0.developerCount.map { $0 as Any } ?? NSNull(),
                         // `interviewers` is gone: HackerRank has no such field, so it was
