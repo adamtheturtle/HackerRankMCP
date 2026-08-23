@@ -7,15 +7,24 @@ private final class HackerRankClientCache: Sendable {
     private let lock = NSLock()
     private nonisolated(unsafe) var storage: [UUID: HackerRankClient] = [:]
 
-    func client(for account: HackerRankMCPAccount) -> HackerRankClient {
-        lock.lock()
-        defer { lock.unlock() }
-        if let existing = storage[account.id] {
+    func client(for account: HackerRankMCPAccount) async -> HackerRankClient {
+        if let existing = synced({ storage[account.id] }) {
             return existing
         }
-        let created = HackerRankClient(token: account.token, baseURL: account.baseURL)
-        storage[account.id] = created
-        return created
+        let created = await HackerRankClient(token: account.token, baseURL: account.baseURL)
+        return synced {
+            if let existing = storage[account.id] {
+                return existing
+            }
+            storage[account.id] = created
+            return created
+        }
+    }
+
+    private func synced<T>(_ body: () -> T) -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        return body()
     }
 }
 
@@ -153,7 +162,7 @@ public struct HackerRankProvider: MCPToolProvider {
         cursor: String?,
         testID: String? = nil
     ) async -> CallTool.Result {
-        let client = clientCache.client(for: account)
+        let client = await clientCache.client(for: account)
         do {
             let payload: [String: Any]
             switch name {
