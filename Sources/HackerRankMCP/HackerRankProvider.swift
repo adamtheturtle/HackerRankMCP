@@ -164,7 +164,7 @@ public struct HackerRankProvider: MCPToolProvider {
                         "id": $0.id,
                         "unique_id": $0.uniqueID.map { $0 as Any } ?? NSNull(),
                         "name": $0.name,
-                        "state": $0.state ?? "",
+                        "state": $0.state.map { $0 as Any } ?? NSNull(),
                         "owner": $0.owner.map { $0 as Any } ?? NSNull(),
                         "draft": $0.draft.map { $0 as Any } ?? NSNull(),
                         "locked": $0.locked.map { $0 as Any } ?? NSNull(),
@@ -193,7 +193,7 @@ public struct HackerRankProvider: MCPToolProvider {
                 payload = pagePayload(page, key: "interviews", account: account) {
                     [
                         "id": $0.id,
-                        "title": $0.title ?? "",
+                        "title": $0.title.map { $0 as Any } ?? NSNull(),
                         "status": $0.status,
                         "url": $0.url.isEmpty ? NSNull() : $0.url,
                         "scheduled_from": $0.scheduledFrom.map { $0 as Any } ?? NSNull(),
@@ -210,7 +210,7 @@ public struct HackerRankProvider: MCPToolProvider {
                     [
                         "id": $0.id,
                         "email": $0.email,
-                        "name": $0.fullName ?? "",
+                        "name": $0.fullName.map { $0 as Any } ?? NSNull(),
                         "score": $0.score.map { $0 as Any } ?? NSNull(),
                         "percentage_score": $0.percentageScore.map { $0 as Any } ?? NSNull(),
                         "status": $0.status.map { $0 as Any } ?? NSNull(),
@@ -230,9 +230,9 @@ public struct HackerRankProvider: MCPToolProvider {
                     [
                         "id": $0.id,
                         "email": $0.email,
-                        "first_name": $0.firstName ?? "",
-                        "last_name": $0.lastName ?? "",
-                        "role": $0.role ?? "",
+                        "first_name": $0.firstName.map { $0 as Any } ?? NSNull(),
+                        "last_name": $0.lastName.map { $0 as Any } ?? NSNull(),
+                        "role": $0.role.map { $0 as Any } ?? NSNull(),
                         "status": $0.status.map { $0 as Any } ?? NSNull(),
                         "teams": $0.teams.map { $0 as Any } ?? NSNull(),
                         "activated": $0.activated.map { $0 as Any } ?? NSNull(),
@@ -283,13 +283,17 @@ public struct HackerRankProvider: MCPToolProvider {
             }
             return row
         }
+        let nextCursor = page.next.flatMap { cursor -> String? in
+            let trimmed = cursor.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }
         return [
             "account": account.name,
             key: items,
             "returned_count": items.count,
             "total_count": page.totalCount.map { $0 as Any } ?? NSNull(),
-            "has_more": page.next != nil,
-            "next_cursor": page.next ?? NSNull(),
+            "has_more": nextCursor != nil,
+            "next_cursor": nextCursor.map { $0 as Any } ?? NSNull(),
         ]
     }
 }
