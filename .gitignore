@@ -1,3 +1,6 @@
 .build/
 .swiftpm/
 .DS_Store
+
+# Vale styles downloaded by `vale sync`.
+styles/
