@@ -1,11 +1,9 @@
 # HackerRankMCP
 
-An unofficial, embeddable Model Context Protocol provider and standalone server for
-the HackerRank for Work REST API.
+An unofficial, embeddable Model Context Protocol provider and standalone server for the HackerRank for Work REST API.
 
-HackerRankMCP gives assistants read-only access to tests, questions, interviews,
-candidates, users, and teams. Credentials remain in the host application or the
-standalone server's environment/configuration file and are never returned to clients.
+HackerRankMCP gives assistants read-only access to tests, questions, interviews, candidates, users, and teams.
+Credentials remain in the host application or the standalone server's environment/configuration file and are never returned to clients.
 
 ## Installation
 
@@ -16,8 +14,7 @@ standalone server's environment/configuration file and are never returned to cli
 )
 ```
 
-Add the `HackerRankMCP` product to an application target, or install and run the
-bundled `hackerrank-mcp` executable.
+Add the `HackerRankMCP` product to an application target, or install and run the bundled `hackerrank-mcp` executable.
 
 ## Embedding
 
@@ -81,4 +78,5 @@ The JSON configuration format supports multiple accounts:
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT.
+See [LICENSE](LICENSE).
