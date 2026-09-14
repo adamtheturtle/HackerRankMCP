@@ -1,5 +1,5 @@
 {
-  "originHash" : "daf77b05d57d4fe4d482d83d27bbe2875c902b9d1c7b21bbc720fb4515216aba",
+  "originHash" : "12e31a461d6f04c6fb09a58595c0471f14a4b9943dc2be74cdf24b91bcfacaf5",
   "pins" : [
     {
       "identity" : "eventsource",
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/adamtheturtle/MCPKit.git",
       "state" : {
-        "revision" : "2829ab57a7d672facd80f390371a0820ef028102",
-        "version" : "0.5.1"
+        "revision" : "c038b066c9dbf9132e4433984e02b4912291f5c1",
+        "version" : "0.6.0"
       }
     },
     {
