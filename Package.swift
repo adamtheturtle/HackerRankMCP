@@ -11,7 +11,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", exact: "0.12.1"),
         .package(url: "https://github.com/adamtheturtle/MCPKit.git", exact: "0.6.0"),
-        .package(url: "https://github.com/adamtheturtle/HackerRankKit.git", exact: "0.8.2"),
+        .package(url: "https://github.com/adamtheturtle/HackerRankKit.git", exact: "0.9.0"),
     ],
     targets: [
         .target(

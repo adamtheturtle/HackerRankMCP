@@ -7,11 +7,11 @@ private final class HackerRankClientCache: Sendable {
     private let lock = NSLock()
     private nonisolated(unsafe) var storage: [UUID: HackerRankClient] = [:]
 
-    func client(for account: HackerRankMCPAccount) async -> HackerRankClient {
+    func client(for account: HackerRankMCPAccount) async throws -> HackerRankClient {
         if let existing = synced({ storage[account.id] }) {
             return existing
         }
-        let created = await HackerRankClient(token: account.token, baseURL: account.baseURL)
+        let created = try await HackerRankClient(token: account.token, baseURL: account.baseURL)
         return synced {
             if let existing = storage[account.id] {
                 return existing
@@ -162,8 +162,8 @@ public struct HackerRankProvider: MCPToolProvider {
         cursor: String?,
         testID: String? = nil
     ) async -> CallTool.Result {
-        let client = await clientCache.client(for: account)
         do {
+            let client = try await clientCache.client(for: account)
             let payload: [String: Any]
             switch name {
             case "list_tests":
