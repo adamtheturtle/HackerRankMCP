@@ -1,5 +1,5 @@
 {
-  "originHash" : "12e31a461d6f04c6fb09a58595c0471f14a4b9943dc2be74cdf24b91bcfacaf5",
+  "originHash" : "7f149ded0521b580606043187c822c3399db4806ba4a4828c87a7acd0c8bba2a",
   "pins" : [
     {
       "identity" : "eventsource",
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/adamtheturtle/HackerRankKit.git",
       "state" : {
-        "revision" : "fa716bbc7f75ccc40af54b14b503821514c395f3",
-        "version" : "0.8.2"
+        "revision" : "701e5da5e38308378b523d8e9c078ff07eb229e8",
+        "version" : "0.9.0"
       }
     },
     {
@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/adamtheturtle/PaginatedRESTClient.git",
       "state" : {
-        "revision" : "5a98c0b23073c81ccf3b28e4b8d0d7f33d302519",
-        "version" : "0.2.0"
+        "revision" : "da0471144598e5a3a13c56bb8651318b569c8488",
+        "version" : "0.5.0"
       }
     },
     {
