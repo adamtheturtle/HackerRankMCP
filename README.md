@@ -73,7 +73,7 @@ The JSON configuration format supports multiple accounts:
 
 ## Requirements
 
-- Swift 6.2+
+- Swift 6.4+
 - macOS 15+
 
 ## License
