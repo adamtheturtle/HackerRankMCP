@@ -85,4 +85,5 @@ See [LICENSE](LICENSE).
 
 `list_questions` includes `custom_system_prompt` when HackerRank returns it.
 An empty string is preserved, and an absent value appears as JSON null.
-Use a question-writing client to set the prompt; this server provides read-only access.
+Use a question-writing client to set the prompt.
+This server provides read-only access.
