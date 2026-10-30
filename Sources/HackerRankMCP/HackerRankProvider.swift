@@ -195,6 +195,7 @@ public struct HackerRankProvider: MCPToolProvider {
                         "tags": $0.tags.map { $0 as Any } ?? NSNull(),
                         "languages": $0.languages.map { $0 as Any } ?? NSNull(),
                         "recommended_duration": $0.recommendedDuration.map { $0 as Any } ?? NSNull(),
+                        "custom_system_prompt": $0.customSystemPrompt.map { $0 as Any } ?? NSNull(),
                     ]
                 }
             case "list_interviews":

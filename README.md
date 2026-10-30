@@ -80,3 +80,9 @@ The JSON configuration format supports multiple accounts:
 
 MIT.
 See [LICENSE](LICENSE).
+
+## Project AI prompts
+
+`list_questions` includes `custom_system_prompt` when HackerRank returns it.
+An empty string is preserved, and an absent value appears as JSON null.
+Use a question-writing client to set the prompt.
