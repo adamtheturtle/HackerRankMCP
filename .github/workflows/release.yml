@@ -66,10 +66,12 @@ jobs:
           package_dir="dist/$package_name"
           swift build -c release --arch arm64 --scratch-path .build-arm64
           swift build -c release --arch x86_64 --scratch-path .build-x86_64
+          arm64_bin="$(swift build -c release --arch arm64 --scratch-path .build-arm64 --show-bin-path)"
+          x86_64_bin="$(swift build -c release --arch x86_64 --scratch-path .build-x86_64 --show-bin-path)"
           mkdir -p "$package_dir"
           lipo -create \
-            .build-arm64/arm64-apple-macosx/release/hackerrank-mcp \
-            .build-x86_64/x86_64-apple-macosx/release/hackerrank-mcp \
+            "$arm64_bin/hackerrank-mcp" \
+            "$x86_64_bin/hackerrank-mcp" \
             -output "$package_dir/hackerrank-mcp"
           lipo -archs "$package_dir/hackerrank-mcp"
           cp LICENSE README.md "$package_dir/"
