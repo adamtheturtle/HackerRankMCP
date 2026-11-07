@@ -1,5 +1,5 @@
 {
-  "originHash" : "625c7844135bed6991b53c1f19277fb6c068d36f5ef03492b6a8408a4b6a30cf",
+  "originHash" : "5bc64178e276e70137ba1c104bb8978bdcf7910eae4760edfeb52360892cb4a2",
   "pins" : [
     {
       "identity" : "eventsource",
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/adamtheturtle/HackerRankKit.git",
       "state" : {
-        "revision" : "1f2051529e36137ffec311cde6f6653a4c988c11",
-        "version" : "0.10.0"
+        "revision" : "cd78d13c7e15815ea3e7f923b974314444b32c70",
+        "version" : "0.11.0"
       }
     },
     {

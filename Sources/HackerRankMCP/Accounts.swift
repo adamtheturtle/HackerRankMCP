@@ -6,17 +6,20 @@ public struct HackerRankMCPAccount: Codable, Hashable, Identifiable, Sendable {
     public var name: String
     public var token: String
     public var baseURL: URL
+    public var scimToken: String?
 
     public init(
         id: UUID = UUID(),
         name: String,
         token: String,
-        baseURL: URL = URL(string: "https://www.hackerrank.com")!
+        baseURL: URL = URL(string: "https://www.hackerrank.com")!,
+        scimToken: String? = nil
     ) {
         self.id = id
         self.name = name
         self.token = token
         self.baseURL = baseURL
+        self.scimToken = scimToken
     }
 }
 
@@ -89,11 +92,13 @@ private struct ConfigFile: Decodable {
         let token: String
         let baseURL: String?
         let isDefault: Bool?
+        let scimToken: String?
 
         enum CodingKeys: String, CodingKey {
             case name, token
             case baseURL = "base_url"
             case isDefault = "default"
+            case scimToken = "scim_token"
         }
     }
 
@@ -123,7 +128,7 @@ public func loadHackerRankMCPAccounts(
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { throw HackerRankMCPConfigError.blankAccountName }
         return try HackerRankMCPAccountSet(accounts: [
-            HackerRankMCPAccount(name: trimmedName, token: token, baseURL: baseURL),
+            HackerRankMCPAccount(name: trimmedName, token: token, baseURL: baseURL, scimToken: environment["HACKERRANK_SCIM_API_TOKEN"]),
         ])
     }
     throw HackerRankMCPConfigError.noAccounts
@@ -160,7 +165,7 @@ private func loadAccounts(fromConfigFileAt url: URL) throws -> HackerRankMCPAcco
         guard !trimmedName.isEmpty else { throw HackerRankMCPConfigError.blankAccountName }
         guard !item.token.isEmpty else { throw HackerRankMCPConfigError.emptyToken(trimmedName) }
         let baseURL = try validatedBaseURL(item.baseURL)
-        let account = HackerRankMCPAccount(name: trimmedName, token: item.token, baseURL: baseURL)
+        let account = HackerRankMCPAccount(name: trimmedName, token: item.token, baseURL: baseURL, scimToken: item.scimToken)
         if item.isDefault == true {
             if sawDefault { throw HackerRankMCPConfigError.multipleDefaults }
             sawDefault = true
