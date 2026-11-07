@@ -2,7 +2,8 @@
 
 An unofficial, embeddable Model Context Protocol provider and standalone server for the HackerRank for Work REST API.
 
-HackerRankMCP gives assistants read-only access to tests, questions, interviews, candidates, users, and teams.
+HackerRankMCP exposes every documented HackerRank for Work API operation, including ATS integrations and SCIM provisioning.
+Read tools are enabled by default; writes require explicit configuration.
 Credentials remain in the host application or the standalone server's environment/configuration file and are never returned to clients.
 
 ## Installation
@@ -66,10 +67,11 @@ The JSON configuration format supports multiple accounts:
 
 ## Security
 
-- Every advertised tool is read-only.
+- Write tools require `HACKERRANK_MCP_ALLOW_WRITES=true`, or `allowWrites: true` when embedding.
 - Tokens are never included in MCP results.
 - Custom base URLs must use HTTPS and cannot contain credentials.
-- The package provides no create, update, archive, or delete tools.
+- SCIM uses `HACKERRANK_SCIM_API_TOKEN`, or an account-specific `scim_token` in the JSON configuration.
+- Provisioning credentials are separate from ordinary API tokens and are never returned in results.
 
 ## Requirements
 
@@ -85,4 +87,16 @@ See [LICENSE](LICENSE).
 
 `list_questions` includes `custom_system_prompt` when HackerRank returns it.
 An empty string is preserved, and an absent value appears as JSON null.
-Use a question-writing client to set the prompt.
+Enable writes and use `api_update_question` to set the prompt in the request body.
+
+## Read coverage
+
+The provider exposes all documented v3 read routes: resource details, global and per-test candidate search, user search, team memberships, test inviters, invite and interview templates, interview transcripts, Interviews V2 artifacts and notes, and offset/cursor audit logs.
+New read tools preserve the complete API JSON response and pagination metadata.
+Artifact reads distinguish available metadata from the pending response and retry delay.
+The `api_` catalogue adds all 76 operations, including writes and SCIM provisioning.
+Each tool accepts nested `path`, `query` and `body` objects with schemas generated from the official contract.
+Responses retain HTTP status, headers and JSON, including empty and pending results.
+
+This branch temporarily pins the HackerRankKit commit from [HackerRankKit #224](https://github.com/adamtheturtle/HackerRankKit/pull/224).
+Replace that revision with a released version after the SDK changes land.

@@ -3,15 +3,23 @@ import HackerRankKit
 import MCP
 import MCPKit
 
-private final class HackerRankClientCache: Sendable {
+final class HackerRankClientCache: Sendable {
     private let lock = NSLock()
     private nonisolated(unsafe) var storage: [UUID: HackerRankClient] = [:]
+
+    private let factory: @Sendable (HackerRankMCPAccount) async throws -> HackerRankClient
+
+    init(factory: @escaping @Sendable (HackerRankMCPAccount) async throws -> HackerRankClient = { account in
+        try await HackerRankClient(token: account.token, baseURL: account.baseURL)
+    }) {
+        self.factory = factory
+    }
 
     func client(for account: HackerRankMCPAccount) async throws -> HackerRankClient {
         if let existing = synced({ storage[account.id] }) {
             return existing
         }
-        let created = try await HackerRankClient(token: account.token, baseURL: account.baseURL)
+        let created = try await factory(account)
         return synced {
             if let existing = storage[account.id] {
                 return existing
@@ -30,18 +38,28 @@ private final class HackerRankClientCache: Sendable {
 
 public struct HackerRankProvider: MCPToolProvider {
     public let accountSet: HackerRankMCPAccountSet
-    private let clientCache = HackerRankClientCache()
+    public let allowWrites: Bool
+    let clientCache: HackerRankClientCache
 
-    public init(accountSet: HackerRankMCPAccountSet) {
+    public init(accountSet: HackerRankMCPAccountSet, allowWrites: Bool = false) {
         self.accountSet = accountSet
+        self.allowWrites = allowWrites
+        clientCache = HackerRankClientCache()
+    }
+
+    init(accountSet: HackerRankMCPAccountSet, clientCache: HackerRankClientCache, allowWrites: Bool = false) {
+        self.accountSet = accountSet
+        self.clientCache = clientCache
+        self.allowWrites = allowWrites
     }
 
     public func tools() async -> [Tool] {
-        mcpTools(from: Self.descriptors)
+        mcpTools(from: Self.descriptors + Self.readDescriptors + fullAPIDescriptors(allowWrites: allowWrites))
     }
 
     public func callTool(_ name: String, arguments: [String: Value]?) async -> CallTool.Result {
-        guard Self.names.contains(name) else { return errorResult("Unknown tool: \(name)") }
+        if name.hasPrefix("api_") { return await callFullAPI(name, arguments: arguments) }
+        guard Self.names.contains(name) || Self.readOperations.contains(where: { $0.name == name }) else { return errorResult("Unknown tool: \(name)") }
 
         if let unexpected = unexpectedArguments(for: name, in: arguments) {
             return errorResult("Unexpected argument(s): \(unexpected)")
@@ -61,6 +79,10 @@ public struct HackerRankProvider: MCPToolProvider {
         let requested = accountArg.stringValue
         guard let account = accountSet.resolve(requested) else {
             return errorResult("No HackerRank account matches \"\(requested ?? "")\".")
+        }
+
+        if let operation = Self.readOperations.first(where: { $0.name == name }) {
+            return await read(operation, arguments: arguments, account: account)
         }
 
         let cursorResult = requiredIdentity(arguments, "cursor", required: false)
@@ -84,7 +106,7 @@ public struct HackerRankProvider: MCPToolProvider {
 
     private func unexpectedArguments(for name: String, in arguments: [String: Value]?) -> String? {
         guard let arguments, !arguments.isEmpty else { return nil }
-        let allowed = Self.allowedArguments[name] ?? []
+        let allowed = Self.allowedArguments[name] ?? Self.readOperations.first(where: { $0.name == name })?.allowedArguments ?? []
         let unknown = arguments.keys.filter { !allowed.contains($0) }.sorted()
         guard !unknown.isEmpty else { return nil }
         return unknown.joined(separator: ", ")
@@ -401,7 +423,7 @@ private func requiredIdentity(
     }
 }
 
-private func compactJSONResult(_ value: Any) -> CallTool.Result {
+func compactJSONResult(_ value: Any) -> CallTool.Result {
     guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else {
         return errorResult("Could not encode the result.")
     }
@@ -411,7 +433,7 @@ private func compactJSONResult(_ value: Any) -> CallTool.Result {
     )
 }
 
-private func errorResult(_ message: String) -> CallTool.Result {
+func errorResult(_ message: String) -> CallTool.Result {
     CallTool.Result(
         content: [.text(text: message, annotations: nil, _meta: nil)],
         isError: true
