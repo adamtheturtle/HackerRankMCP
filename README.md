@@ -3,7 +3,8 @@
 An unofficial, embeddable Model Context Protocol provider and standalone server for the HackerRank for Work REST API.
 
 HackerRankMCP exposes every documented HackerRank for Work API operation, including ATS integrations and SCIM provisioning.
-Read tools are enabled by default. Writes require explicit configuration.
+Read tools are enabled by default.
+Writes require explicit configuration.
 Credentials remain in the host application or the standalone server's environment/configuration file and are never returned to clients.
 
 ## Installation
