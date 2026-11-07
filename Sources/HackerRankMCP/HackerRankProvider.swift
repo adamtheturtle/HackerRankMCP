@@ -10,7 +10,7 @@ final class HackerRankClientCache: Sendable {
     private let factory: @Sendable (HackerRankMCPAccount) async throws -> HackerRankClient
 
     init(factory: @escaping @Sendable (HackerRankMCPAccount) async throws -> HackerRankClient = { account in
-        try await HackerRankClient(token: account.token, baseURL: account.baseURL)
+        try HackerRankClient(token: account.token, baseURL: account.baseURL)
     }) {
         self.factory = factory
     }
