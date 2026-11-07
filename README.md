@@ -114,7 +114,7 @@ Credentials stay in the host's account store.
 RankBuddy supplies these closures from its Keychain account store and keeps its activity log, account resource and triage prompt in an app adapter.
 The library preserves its friendly tool names and result formats, including test-scoped `search_candidates`.
 The standalone `HackerRankProvider` entrypoint retains global `search_candidates` and its existing list response formats.
-Both entrypoints use the shared canonical `api_` implementation and friendly write tools.
+Both entrypoints use the same canonical `api_` tools and friendly write tools.
 Writes remain disabled by default, including direct calls to tools that are not advertised.
 
 Release order: HackerRankKit, then HackerRankMCP, then RankBuddy.
