@@ -99,7 +99,7 @@ The `api_` catalogue adds all 76 operations, including writes and SCIM provision
 Each tool accepts nested `path`, `query` and `body` objects with schemas generated from the official contract.
 Responses retain HTTP status, headers and JSON, including empty and pending results.
 
-The package uses HackerRankKit 0.11.0 for the complete API contract.
+The package uses HackerRankKit 0.11.1 for the complete API contract.
 
 
 ## Embedding in RankBuddy

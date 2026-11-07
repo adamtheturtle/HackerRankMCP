@@ -541,10 +541,10 @@ struct EmbeddedToolContractTests {
             InterviewTemplate.self, from: Data(#"{"name":"No ID"}"#.utf8)
         )
         let zero = try JSONDecoder().decode(
-            InterviewTemplate.self, from: Data(#"{"id":0,"name":"Zero"}"#.utf8)
+            InterviewTemplate.self, from: Data(#"{"id":"0","name":"Zero"}"#.utf8)
         )
         let valid = try JSONDecoder().decode(
-            InterviewTemplate.self, from: Data(#"{"id":42,"name":"Ready"}"#.utf8)
+            InterviewTemplate.self, from: Data(#"{"id":"42","name":"Ready"}"#.utf8)
         )
         #expect(HackerRankToolProvider.interviewTemplatePayload(missing) == nil)
         #expect(HackerRankToolProvider.interviewTemplatePayload(zero) == nil)
