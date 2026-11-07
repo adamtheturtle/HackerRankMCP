@@ -3,16 +3,24 @@ import HackerRankKit
 import HackerRankKitMock
 @testable import HackerRankMCP
 import MCP
+import MCPKit
 import Testing
 
 struct FullAPITests {
-    @Test func `all 76 documented operations are advertised and runnable with writes enabled`() async throws {
+    @Test(arguments: [false, true])
+    func `all 76 documented operations are advertised and runnable with writes enabled`(embedded: Bool) async throws {
         let client = await MainActor.run { HackerRankClient.mock(key: "full-api-\(UUID().uuidString)") }
         let account = HackerRankMCPAccount(name: "Demo", token: "v3-synthetic", scimToken: "scim-synthetic")
-        let provider = try HackerRankProvider(
-            accountSet: HackerRankMCPAccountSet(accounts: [account]),
-            clientCache: HackerRankClientCache { _ in client }, allowWrites: true
-        )
+        let provider: any MCPToolProvider = if embedded {
+            HackerRankToolProvider(allowWrites: true, context: {
+                HackerRankMCPContext(accounts: [account], currentAccountID: account.id)
+            }, makeClient: { _ in client })
+        } else {
+            try HackerRankProvider(
+                accountSet: HackerRankMCPAccountSet(accounts: [account]),
+                clientCache: HackerRankClientCache { _ in client }, allowWrites: true
+            )
+        }
         let catalogue = try HackerRankClient.apiCatalogue()
         let tools = await provider.tools()
         #expect(Set(tools.filter { $0.name.hasPrefix("api_") }.map(\.name)) == Set(catalogue.operations.map(\.id)))
@@ -31,7 +39,7 @@ struct FullAPITests {
             if operation.bodyRequired {
                 arguments["body"] = .object([:])
             }
-            let result = await provider.callTool(operation.id, arguments: arguments)
+            let result = try await provider.callTool(operation.id, arguments: arguments)
             #expect(result.isError != true, "\(operation.id) must have a runnable handler")
             let text = result.content.compactMap { content -> String? in
                 if case let .text(text, _, _) = content {
@@ -61,7 +69,7 @@ struct FullAPITests {
             try hackerRankMCPWritesEnabled(environment: ["HACKERRANK_MCP_ALLOW_WRITES": "yes"])
         }
         let accounts = try loadHackerRankMCPAccounts(environment: [
-            "HACKERRANK_API_TOKEN": "v3-synthetic", "HACKERRANK_SCIM_API_TOKEN": "scim-synthetic",
+            "HACKERRANK_API_TOKEN": "v3-synthetic", "HACKERRANK_SCIM_API_TOKEN": "scim-synthetic"
         ])
         #expect(accounts.accounts.first?.scimToken == "scim-synthetic")
     }

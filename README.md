@@ -101,3 +101,21 @@ Responses retain HTTP status, headers and JSON, including empty and pending resu
 
 This branch temporarily pins the HackerRankKit commit from [HackerRankKit #224](https://github.com/adamtheturtle/HackerRankKit/pull/224).
 Replace that revision with a released version after the SDK is released.
+
+
+## Embedding in RankBuddy
+
+`HackerRankToolProvider` owns the embedded tool catalogue and request handling.
+Its public initializer accepts a main-actor `context` closure and an asynchronous `makeClient` closure.
+The context supplies a fresh `HackerRankMCPContext` containing accounts and the current selection for each call.
+The client factory can use the host's authenticated session or a mock backend.
+Credentials stay in the host's account store.
+
+RankBuddy supplies these closures from its Keychain account store and keeps its activity log, account resource and triage prompt in an app adapter.
+The library preserves its friendly tool names and result formats, including test-scoped `search_candidates`.
+The standalone `HackerRankProvider` entrypoint retains global `search_candidates` and its existing list response formats.
+Both entrypoints use the shared canonical `api_` implementation and friendly write tools.
+Writes remain disabled by default, including direct calls to tools that are not advertised.
+
+Release order: HackerRankKit, then HackerRankMCP, then RankBuddy.
+RankBuddy must replace its temporary HackerRankMCP commit pin with a released version before merging.

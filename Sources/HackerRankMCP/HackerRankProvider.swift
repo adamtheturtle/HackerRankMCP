@@ -53,12 +53,26 @@ public struct HackerRankProvider: MCPToolProvider {
         self.allowWrites = allowWrites
     }
 
+    private var sharedTools: HackerRankToolProvider {
+        let accounts = accountSet
+        let cache = clientCache
+        return HackerRankToolProvider(
+            allowWrites: allowWrites,
+            context: { HackerRankMCPContext(accounts: accounts.accounts, currentAccountID: accounts.defaultAccountID) },
+            makeClient: { try await cache.client(for: $0) }
+        )
+    }
+
     public func tools() async -> [Tool] {
-        mcpTools(from: Self.descriptors + Self.readDescriptors + fullAPIDescriptors(allowWrites: allowWrites))
+        let existing = mcpTools(from: Self.descriptors + Self.readDescriptors)
+        let names = Set(existing.map(\.name))
+        return existing + (await sharedTools.tools()).filter { !names.contains($0.name) }
     }
 
     public func callTool(_ name: String, arguments: [String: Value]?) async -> CallTool.Result {
-        if name.hasPrefix("api_") { return await callFullAPI(name, arguments: arguments) }
+        if name.hasPrefix("api_") || (!Self.names.contains(name) && !Self.readOperations.contains(where: { $0.name == name })) {
+            return await sharedTools.callTool(name, arguments: arguments)
+        }
         guard Self.names.contains(name) || Self.readOperations.contains(where: { $0.name == name }) else { return errorResult("Unknown tool: \(name)") }
 
         if let unexpected = unexpectedArguments(for: name, in: arguments) {
