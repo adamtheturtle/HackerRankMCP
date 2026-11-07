@@ -99,8 +99,7 @@ The `api_` catalogue adds all 76 operations, including writes and SCIM provision
 Each tool accepts nested `path`, `query` and `body` objects with schemas generated from the official contract.
 Responses retain HTTP status, headers and JSON, including empty and pending results.
 
-This branch temporarily pins the HackerRankKit commit from [HackerRankKit #224](https://github.com/adamtheturtle/HackerRankKit/pull/224).
-Replace that revision with a released version after the SDK is released.
+The package uses HackerRankKit 0.11.0 for the complete API contract.
 
 
 ## Embedding in RankBuddy
@@ -118,4 +117,4 @@ Both entrypoints use the same canonical `api_` tools and friendly write tools.
 Writes remain disabled by default, including direct calls to tools that are not advertised.
 
 Release order: HackerRankKit, then HackerRankMCP, then RankBuddy.
-RankBuddy must replace its temporary HackerRankMCP commit pin with a released version before merging.
+RankBuddy consumes released SDK and MCP package versions.
