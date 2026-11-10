@@ -31,7 +31,16 @@ nonisolated enum InterviewTemplateValidation {
 // swiftlint:disable file_length
 
 extension HackerRankToolProvider {
-    nonisolated static let supportedQuestionTypes = ["coding", "mcq", "subjective"]
+    nonisolated static let supportedQuestionTypes = QuestionType.allCases.map(\.rawValue)
+
+    nonisolated static func normalizedQuestionType(_ value: String?) -> String? {
+        guard let value = normalizedOptionalString(value) else { return nil }
+        return supportedQuestionTypes.first { $0.caseInsensitiveCompare(value) == .orderedSame }
+    }
+
+    nonisolated static var questionTypeRequirement: String {
+        "`type` must be one of \(supportedQuestionTypes.joined(separator: ", "))."
+    }
 
     static let writeToolNames: Set<String> = [
         "create_test", "update_test", "archive_test", "delete_test", "invite_candidate",
@@ -849,10 +858,8 @@ extension HackerRankToolProvider {
         guard let name = Self.normalizedOptionalString(rawName) else {
             return errorResult("`name` must not be empty.")
         }
-        guard let type = Self.normalizedOptionalString(rawType)?.lowercased(),
-              Self.supportedQuestionTypes.contains(type)
-        else {
-            return errorResult("`type` must be coding, mcq, or subjective.")
+        guard let type = Self.normalizedQuestionType(rawType) else {
+            return errorResult(Self.questionTypeRequirement)
         }
         guard let problemStatement = Self.normalizedOptionalString(
             stringArgument(arguments, "problem_statement")
@@ -863,7 +870,7 @@ extension HackerRankToolProvider {
             return errorResult("`recommended_duration` is required and must be zero or greater.")
         }
 
-        if let error = questionListValidationError(arguments) {
+        if let error = questionListValidationError(arguments, type: type) {
             return errorResult(error)
         }
         guard let resolved = resolveAccount(account) else { return errorResult("No account configured.") }
@@ -904,9 +911,9 @@ extension HackerRankToolProvider {
         let rawName = stringArgument(arguments, "name")
         let name = Self.normalizedOptionalString(rawName)
         let rawType = stringArgument(arguments, "type")
-        let type = Self.normalizedOptionalString(rawType)?.lowercased()
+        let type = Self.normalizedQuestionType(rawType)
         guard rawType == nil || type.map(Self.supportedQuestionTypes.contains) == true else {
-            return errorResult("`type` must be coding, mcq, or subjective.")
+            return errorResult(Self.questionTypeRequirement)
         }
 
         let status = Self.normalizedOptionalString(stringArgument(arguments, "status"))?.lowercased()
@@ -917,24 +924,30 @@ extension HackerRankToolProvider {
             return errorResult("`recommended_duration` must be zero or greater.")
         }
 
-        if let error = questionUpdateValidationError(arguments, name: name) {
+        if let error = questionUpdateValidationError(arguments, name: name, type: type) {
             return errorResult(error)
         }
         guard let resolved = resolveAccount(account) else { return errorResult("No account configured.") }
 
         do {
-            let written = try await (client(for: resolved)).updateQuestion(
+            let written = try await (client(for: resolved)).updateQuestionMetadata(
                 questionID: questionID,
-                name: name,
-                type: type,
-                options: questionWriteOptions(arguments)
+                changes: QuestionMetadataChanges(
+                    name: name,
+                    type: type,
+                    languages: stringArrayArgument(arguments, "languages", preservingEmpty: true),
+                    problemStatement: stringArgument(arguments, "problem_statement"),
+                    recommendedDuration: intArgument(arguments, "recommended_duration"),
+                    tags: stringArrayArgument(arguments, "tags", preservingEmpty: true),
+                    customSystemPrompt: stringArgument(arguments, "custom_system_prompt")
+                )
             )
             return jsonResult([
                 "account": resolved.label,
                 "updated_question": [
-                    "id": Self.validatedResultID(written.id, fallback: questionID),
-                    "name": written.name ?? "",
-                    "type": written.type ?? ""
+                    "id": Self.validatedResultID(written?.id, fallback: questionID),
+                    "name": written?.name ?? "",
+                    "type": written?.type ?? ""
                 ]
             ])
         } catch {
@@ -952,7 +965,7 @@ extension HackerRankToolProvider {
         )
     }
 
-    private func questionListValidationError(_ arguments: [String: Value]?) -> String? {
+    private func questionListValidationError(_ arguments: [String: Value]?, type: String?) -> String? {
         if let value = arguments?["custom_system_prompt"] {
             guard case let .string(prompt) = value else {
                 return "`custom_system_prompt` must be a string."
@@ -960,6 +973,9 @@ extension HackerRankToolProvider {
 
             if let issue = QuestionEditValidation.systemPromptIssue(prompt) {
                 return issue
+            }
+            if let type, let known = QuestionType(rawValue: type), !known.supportsCustomSystemPrompt {
+                return "`custom_system_prompt` is not supported for question type \(type)."
             }
         }
         for key in ["languages", "tags"] where hasInvalidStringArrayElements(arguments, key) {
@@ -970,12 +986,13 @@ extension HackerRankToolProvider {
 
     private func questionUpdateValidationError(
         _ arguments: [String: Value]?,
-        name: String?
+        name: String?,
+        type: String?
     ) -> String? {
         if arguments?["name"] != nil, name == nil {
             return "`name` must not be empty."
         }
-        return questionListValidationError(arguments)
+        return questionListValidationError(arguments, type: type)
     }
 
     @MainActor

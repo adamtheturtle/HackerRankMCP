@@ -11,7 +11,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", exact: "0.12.1"),
         .package(url: "https://github.com/adamtheturtle/MCPKit.git", exact: "0.6.0"),
-        .package(url: "https://github.com/adamtheturtle/HackerRankKit.git", exact: "0.11.1"),
+        .package(url: "https://github.com/adamtheturtle/HackerRankKit.git", exact: "0.12.1"),
     ],
     targets: [
         .target(
@@ -26,6 +26,7 @@ let package = Package(
             name: "hackerrank-mcp",
             dependencies: [
                 "HackerRankMCP",
+                .product(name: "HackerRankKit", package: "HackerRankKit"),
                 .product(name: "MCP", package: "swift-sdk"),
                 .product(name: "MCPKit", package: "MCPKit"),
             ]

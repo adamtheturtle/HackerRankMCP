@@ -12,7 +12,7 @@ Credentials remain in the host application or the standalone server's environmen
 ```swift
 .package(
     url: "https://github.com/adamtheturtle/HackerRankMCP.git",
-    from: "0.1.1"
+    from: "0.5.0"
 )
 ```
 
@@ -61,6 +61,11 @@ The JSON configuration format supports multiple accounts:
 }
 ```
 
+Released archives include the SDK data bundle beside the executable.
+Keep that bundle with the binary when installing it.
+Run `hackerrank-mcp --check-installation` to verify the bundled API catalogue without credentials or network requests.
+`hackerrank-mcp --version` prints the server version without starting it.
+
 ## Products
 
 - `HackerRankMCP`: account configuration and reusable ``HackerRankProvider``.
@@ -99,7 +104,7 @@ The `api_` catalogue adds all 76 operations, including writes and SCIM provision
 Each tool accepts nested `path`, `query` and `body` objects with schemas generated from the official contract.
 Responses retain HTTP status, headers and JSON, including empty and pending results.
 
-The package uses HackerRankKit 0.11.1 for the complete API contract.
+The package uses HackerRankKit 0.12.1 for the complete API contract.
 
 
 ## Embedding in RankBuddy
@@ -118,3 +123,19 @@ Writes remain disabled by default, including direct calls to tools that are not 
 
 Release order: HackerRankKit, then HackerRankMCP, then RankBuddy.
 RankBuddy consumes released SDK and MCP package versions.
+
+## Question writes
+
+Friendly question tools use the SDK's known API type values, including `code`, `whiteboard`, and `fullstack`.
+The `textAns` spelling is preserved when normalizing friendly input.
+Replace the old `coding` input with `code`.
+Choose the appropriate API type for formerly `subjective` questions.
+Known unsupported types reject custom system prompts before a write, including empty-string clears.
+The complete `api_` tools retain the raw API surface for future type values.
+
+Friendly metadata updates read the current question and preserve required fields and original answer representations.
+Omitted fields retain their current values.
+Explicit empty strings, empty lists, and zero remain selected changes.
+Incomplete or malformed required metadata prevents the PUT.
+The read and write are separate requests without concurrency locking.
+Write access remains disabled by default.
