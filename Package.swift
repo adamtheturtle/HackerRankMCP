@@ -26,6 +26,7 @@ let package = Package(
             name: "hackerrank-mcp",
             dependencies: [
                 "HackerRankMCP",
+                .product(name: "HackerRankKit", package: "HackerRankKit"),
                 .product(name: "MCP", package: "swift-sdk"),
                 .product(name: "MCPKit", package: "MCPKit"),
             ]

@@ -74,7 +74,12 @@ jobs:
             "$x86_64_bin/hackerrank-mcp" \
             -output "$package_dir/hackerrank-mcp"
           lipo -archs "$package_dir/hackerrank-mcp"
+          # SwiftPM's data bundles must stay beside the standalone executable.
+          find "$arm64_bin" -maxdepth 1 -type d -name '*.bundle' \
+            -exec cp -R {} "$package_dir/" \;
           cp LICENSE README.md "$package_dir/"
+          "$package_dir/hackerrank-mcp" --version | grep -Fx "$version"
+          "$package_dir/hackerrank-mcp" --check-installation
       - name: Import the Developer ID certificate
         id: signing_certificate
         uses: Apple-Actions/import-codesign-certs@288b8ec97b82c66b6f2a6baaf7acc8dfbcbe331c  # v7.2.0

@@ -61,6 +61,11 @@ The JSON configuration format supports multiple accounts:
 }
 ```
 
+Released archives include the SDK data bundle beside the executable.
+Keep that bundle with the binary when installing it.
+Run `hackerrank-mcp --check-installation` to verify the bundled API catalogue without credentials or network requests.
+`hackerrank-mcp --version` prints the server version without starting it.
+
 ## Products
 
 - `HackerRankMCP`: account configuration and reusable ``HackerRankProvider``.
