@@ -1317,7 +1317,7 @@ struct EmbeddedToolContractTests {
     @Test func `question system prompts allow explicit clears and reject invalid values`() async {
         #expect(HackerRankToolProvider.hasQuestionUpdate(["custom_system_prompt": .string("")]))
         let cleared = await writeProvider().callTool(
-            "update_question", arguments: ["question_id": .string("q1"), "custom_system_prompt": .string("")]
+            "update_question", arguments: ["question_id": .string("q1"), "type": .string("fullstack"), "custom_system_prompt": .string("")]
         )
         #expect(cleared.isError != true)
         for value in [Value.int(1), .string(String(repeating: "x", count: 15001))] {
@@ -1331,7 +1331,7 @@ struct EmbeddedToolContractTests {
     @Test func `question writes reject missing create requirements`() async {
         let created = await writeProvider().callTool(
             "create_question",
-            arguments: ["name": .string("Sum"), "type": .string("coding")]
+            arguments: ["name": .string("Sum"), "type": .string("code")]
         )
         #expect(created.isError == true)
         #expect(text(created).contains("problem_statement"))
@@ -1341,7 +1341,7 @@ struct EmbeddedToolContractTests {
         let created = await writeProvider().callTool(
             "create_question",
             arguments: [
-                "name": .string("Sum"), "type": .string("coding"),
+                "name": .string("Sum"), "type": .string("code"),
                 "problem_statement": .string("Return two indices."),
                 "recommended_duration": .int(-1)
             ]
@@ -1468,7 +1468,7 @@ struct EmbeddedToolContractTests {
     @Test func `create_question rejects a blank name`() async {
         let result = await writeProvider().callTool(
             "create_question",
-            arguments: ["name": .string(" \n"), "type": .string("coding")]
+            arguments: ["name": .string(" \n"), "type": .string("code")]
         )
         #expect(result.isError == true)
         #expect(text(result).contains("name"))
