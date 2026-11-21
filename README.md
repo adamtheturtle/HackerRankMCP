@@ -109,7 +109,7 @@ The package uses HackerRankKit 0.12.1 for the complete API contract.
 
 ## Embedding in RankBuddy
 
-`HackerRankToolProvider` owns the embedded tool catalogue and request handling.
+`HackerRankToolProvider` provides the embedded tool catalogue and handles requests.
 Its public initializer accepts a main-actor `context` closure and an asynchronous `makeClient` closure.
 The context supplies a fresh `HackerRankMCPContext` containing accounts and the current selection for each call.
 The client factory can use the host's authenticated session or a mock backend.
